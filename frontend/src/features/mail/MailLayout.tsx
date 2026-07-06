@@ -70,9 +70,11 @@ export default function MailLayout() {
         {/* 左侧: 文件夹树 (始终显示) */}
         <FolderSidebar
           className={
-            activePane === 'folders' || activeView !== 'mail'
-              ? 'block'
-              : 'hidden lg:block'
+            activeView !== 'mail'
+              ? 'hidden lg:block lg:w-56'
+              : activePane === 'folders'
+                ? 'block'
+                : 'hidden lg:block'
           }
           onSelectFolder={() => setActivePane('list')}
         />
