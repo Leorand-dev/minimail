@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMailStore } from '@/stores/mail';
 import { useAuthStore } from '@/stores/auth';

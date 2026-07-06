@@ -4,9 +4,9 @@
  * 功能: 创建 / 重命名 / 删除标签, 查看关联笔记数
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import type { NoteTag } from '@/api/memos';
-import { createTag, renameTag, deleteTag, fetchTags } from '@/api/memos';
+import { createTag, renameTag, deleteTag } from '@/api/memos';
 
 interface TagsManagerProps {
   tags: NoteTag[];

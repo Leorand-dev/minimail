@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMailStore } from '@/stores/mail';
 import api from '@/api/client';
@@ -82,7 +82,7 @@ export default function ComposePage({ onBack }: ComposePageProps) {
       };
       if (from.trim()) payload.from_addr = from.trim();
 
-      const res = await api.post('/mail/send', payload);
+      await api.post('/mail/send', payload);
 
       setSuccess(`✅ 发送成功`);
       setTimeout(() => onBack ? onBack() : navigate('/mail'), 2000);

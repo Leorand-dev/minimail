@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { fetchProfile, updateProfile, changePassword } from '@/api/user';
 
 export default function ProfilePanel() {

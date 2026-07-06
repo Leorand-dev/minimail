@@ -1,12 +1,11 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchContacts, fetchGroups, createContact, updateContact, deleteContact } from '@/api/contacts';
+import { fetchContacts, createContact, updateContact, deleteContact, fetchGroups } from '@/api/contacts';
 import type { Contact, ContactGroup } from '@/api/contacts';
 
 interface ContactsPageProps {
   onBack?: () => void;
 }
-
 export default function ContactsPage({ onBack }: ContactsPageProps) {
   const navigate = useNavigate();
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);

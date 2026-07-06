@@ -5,7 +5,7 @@
  * 支持标签输入 (逗号分隔)
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';

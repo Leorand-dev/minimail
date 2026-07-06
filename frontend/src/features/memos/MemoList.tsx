@@ -2,7 +2,7 @@
  * MemoList — 笔记列表 (时间线布局)
  */
 
-import React from 'react';
+
 import type { Note } from '@/api/memos';
 import MemoCard from './MemoCard';
 import { useNotesStore } from '@/stores/memos';

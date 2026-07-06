@@ -5,7 +5,7 @@
  * 时间 + 标签 + 操作按钮 (编辑/删除/置顶)
  */
 
-import React from 'react';
+
 import ReactMarkdown from 'react-markdown';
 import type { Note } from '@/api/memos';
 

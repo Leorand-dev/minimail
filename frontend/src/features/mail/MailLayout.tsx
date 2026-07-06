@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useMailStore } from '@/stores/mail';
 import { fetchFolders, fetchMessages, searchMessages as searchApi } from '@/api/mail';
 import api from '@/api/client';

@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useMailStore } from '@/stores/mail';
 import { getAttachmentUrl } from '@/api/mail';
 

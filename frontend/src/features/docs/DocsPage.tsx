@@ -5,7 +5,7 @@
  * 内容从后端 /system-docs 端点获取
  */
 
-import React, { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import api from '@/api/client';
 
 interface DocEntry {
