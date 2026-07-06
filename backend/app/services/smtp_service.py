@@ -127,6 +127,12 @@ async def send_email(
     reply_to: str | None = None,
     in_reply_to: str | None = None,
     attachments: list[dict] | None = None,
+    # SMTP 配置覆盖 (多账户支持)
+    _smtp_host: str | None = None,
+    _smtp_port: int | None = None,
+    _smtp_ssl: bool | None = None,
+    _smtp_username: str | None = None,
+    _smtp_password: str | None = None,
 ) -> dict:
     """
     通过用户的 SMTP 配置发送邮件。
@@ -134,23 +140,28 @@ async def send_email(
     Returns:
         {"message_id": str, "response": str}
     """
-    import base64
-    from cryptography.fernet import Fernet
-    from app.config import settings
+    # 使用传入的 SMTP 配置 (多账户) 或回退到用户配置
+    smtp_host = _smtp_host or user.smtp_host
+    smtp_port = _smtp_port or user.smtp_port or 465
+    smtp_ssl = _smtp_ssl if _smtp_ssl is not None else user.smtp_ssl
+    smtp_username = _smtp_username or user.smtp_username or user.email
+    smtp_password = _smtp_password or ""
 
-    if not user.smtp_host:
+    if not smtp_host:
         raise SmtpError("SMTP 未配置")
 
-    # 解密 SMTP 密码
-    try:
-        cipher = Fernet(settings.encryption_key.encode())
-        smtp_password = cipher.decrypt(
-            base64.urlsafe_b64decode(user.smtp_password_enc.encode())
-        ).decode()
-    except Exception:
-        smtp_password = user.smtp_password_enc or ""
-
-    smtp_username = user.smtp_username or user.email
+    # 如果没传密码 (从账户来的直接是明文), 且需要从 user 解密
+    if _smtp_password is None and user.smtp_password_enc:
+        import base64
+        from cryptography.fernet import Fernet
+        from app.config import settings
+        try:
+            cipher = Fernet(settings.encryption_key.encode())
+            smtp_password = cipher.decrypt(
+                base64.urlsafe_b64decode(user.smtp_password_enc.encode())
+            ).decode()
+        except Exception:
+            smtp_password = user.smtp_password_enc or ""
 
     # Build message
     msg = _build_message(
@@ -173,12 +184,12 @@ async def send_email(
         all_recipients.extend(bcc)
 
     try:
-        if user.smtp_ssl:
+        if smtp_ssl:
             # SSL 模式 (默认端口 465)
             response = await aiosmtplib.send(
                 msg,
-                hostname=user.smtp_host,
-                port=user.smtp_port or 465,
+                hostname=smtp_host,
+                port=smtp_port or 465,
                 username=smtp_username,
                 password=smtp_password,
                 use_tls=True,
@@ -188,8 +199,8 @@ async def send_email(
             # STARTTLS 模式 (默认端口 587)
             response = await aiosmtplib.send(
                 msg,
-                hostname=user.smtp_host,
-                port=user.smtp_port or 587,
+                hostname=smtp_host,
+                port=smtp_port or 587,
                 username=smtp_username,
                 password=smtp_password,
                 start_tls=True,

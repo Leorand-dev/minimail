@@ -36,10 +36,41 @@ from app.services.auth import get_current_user
 router = APIRouter(prefix="/api/mail", tags=["mail"])
 
 
-async def _get_user_imap_config(user: User) -> dict:
-    """获取用户的 IMAP 连接配置."""
+async def _get_user_imap_config(
+    user: User,
+    db: AsyncSession | None = None,
+    account_id: uuid.UUID | None = None,
+) -> dict:
+    """获取用户的 IMAP 连接配置, 支持多账户."""
+    # 优先用指定账户
+    if account_id and db:
+        from app.services.email_account import get_account
+        acc = await get_account(db, account_id, user.id)
+        if acc and acc.imap_host:
+            from app.services.email_account import _decrypt_password
+            return {
+                "host": acc.imap_host,
+                "port": acc.imap_port,
+                "ssl": acc.imap_ssl,
+                "username": acc.imap_username or acc.email,
+                "password": _decrypt_password(acc.imap_password_enc) if acc.imap_password_enc else "",
+            }
+
+    # 用默认账户
+    if db:
+        from app.services.email_account import get_default_account, _decrypt_password
+        acc = await get_default_account(db, user.id)
+        if acc and acc.imap_host:
+            return {
+                "host": acc.imap_host,
+                "port": acc.imap_port,
+                "ssl": acc.imap_ssl,
+                "username": acc.imap_username or acc.email,
+                "password": _decrypt_password(acc.imap_password_enc) if acc.imap_password_enc else "",
+            }
+
+    # 回退到旧配置 (User 表字段)
     if not user.imap_host:
-        # 自动推断: 使用 email 域名
         domain = user.email.split("@")[-1]
         return {
             "host": f"imap.{domain}",
@@ -65,10 +96,10 @@ async def _get_user_imap_config(user: User) -> dict:
 @router.get("/folders")
 async def get_folders(
     user: User = Depends(get_current_user),
-    _db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> list[Folder]:
     """获取用户邮箱的所有文件夹."""
-    cfg = await _get_user_imap_config(user)
+    cfg = await _get_user_imap_config(user, db)
     imap = await get_connection(
         user.id, cfg["host"], cfg["port"], cfg["ssl"], cfg["username"], cfg["password"]
     )
@@ -80,10 +111,10 @@ async def get_folders(
 async def create_folder_route(
     name: str = Query(..., description="文件夹名称"),
     user: User = Depends(get_current_user),
-    _db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """创建新文件夹."""
-    cfg = await _get_user_imap_config(user)
+    cfg = await _get_user_imap_config(user, db)
     imap = await get_connection(
         user.id, cfg["host"], cfg["port"], cfg["ssl"], cfg["username"], cfg["password"]
     )
@@ -97,10 +128,10 @@ async def create_folder_route(
 async def delete_folder_route(
     name: str = Query(...),
     user: User = Depends(get_current_user),
-    _db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """删除文件夹."""
-    cfg = await _get_user_imap_config(user)
+    cfg = await _get_user_imap_config(user, db)
     imap = await get_connection(
         user.id, cfg["host"], cfg["port"], cfg["ssl"], cfg["username"], cfg["password"]
     )
@@ -123,10 +154,10 @@ async def get_messages(
     sort_field: str = Query("date"),
     sort_order: str = Query("DESC", pattern="^(ASC|DESC)$"),
     user: User = Depends(get_current_user),
-    _db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> dict:
     """获取邮件列表."""
-    cfg = await _get_user_imap_config(user)
+    cfg = await _get_user_imap_config(user, db)
     imap = await get_connection(
         user.id, cfg["host"], cfg["port"], cfg["ssl"], cfg["username"], cfg["password"]
     )
@@ -151,10 +182,10 @@ async def search_messages_route(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     user: User = Depends(get_current_user),
-    _db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> dict:
     """搜索邮件."""
-    cfg = await _get_user_imap_config(user)
+    cfg = await _get_user_imap_config(user, db)
     imap = await get_connection(
         user.id, cfg["host"], cfg["port"], cfg["ssl"], cfg["username"], cfg["password"]
     )
@@ -176,10 +207,10 @@ async def get_message(
     folder: str = Query("INBOX"),
     uid: int = Path(..., description="邮件 UID", ge=1),
     user: User = Depends(get_current_user),
-    _db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> MessageDetail:
     """获取邮件完整内容."""
-    cfg = await _get_user_imap_config(user)
+    cfg = await _get_user_imap_config(user, db)
     imap = await get_connection(
         user.id, cfg["host"], cfg["port"], cfg["ssl"], cfg["username"], cfg["password"]
     )
@@ -200,10 +231,10 @@ async def mark_read(
     folder: str = Query("INBOX"),
     uid: int = Path(...),
     user: User = Depends(get_current_user),
-    _db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """标记邮件为已读."""
-    cfg = await _get_user_imap_config(user)
+    cfg = await _get_user_imap_config(user, db)
     imap = await get_connection(
         user.id, cfg["host"], cfg["port"], cfg["ssl"], cfg["username"], cfg["password"]
     )
@@ -216,10 +247,10 @@ async def mark_unread(
     folder: str = Query("INBOX"),
     uid: int = Path(...),
     user: User = Depends(get_current_user),
-    _db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """标记邮件为未读."""
-    cfg = await _get_user_imap_config(user)
+    cfg = await _get_user_imap_config(user, db)
     imap = await get_connection(
         user.id, cfg["host"], cfg["port"], cfg["ssl"], cfg["username"], cfg["password"]
     )
@@ -233,10 +264,10 @@ async def move(
     uid: int = Path(...),
     target: str = Query(...),
     user: User = Depends(get_current_user),
-    _db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """移动邮件."""
-    cfg = await _get_user_imap_config(user)
+    cfg = await _get_user_imap_config(user, db)
     imap = await get_connection(
         user.id, cfg["host"], cfg["port"], cfg["ssl"], cfg["username"], cfg["password"]
     )
@@ -249,10 +280,10 @@ async def delete(
     folder: str = Query("INBOX"),
     uid: int = Path(...),
     user: User = Depends(get_current_user),
-    _db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """删除邮件."""
-    cfg = await _get_user_imap_config(user)
+    cfg = await _get_user_imap_config(user, db)
     imap = await get_connection(
         user.id, cfg["host"], cfg["port"], cfg["ssl"], cfg["username"], cfg["password"]
     )
@@ -271,10 +302,10 @@ async def download_attachment(
     uid: int = Path(..., ge=1),
     part_id: str = Path(...),
     user: User = Depends(get_current_user),
-    _db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """下载邮件附件."""
-    cfg = await _get_user_imap_config(user)
+    cfg = await _get_user_imap_config(user, db)
     imap = await get_connection(
         user.id, cfg["host"], cfg["port"], cfg["ssl"], cfg["username"], cfg["password"]
     )
@@ -317,13 +348,29 @@ class SendRequest(BaseModel):
 async def send_mail(
     body: SendRequest,
     user: User = Depends(get_current_user),
-    _db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """发送邮件 (通过用户 SMTP 配置)."""
     from app.services.smtp_service import send_email
+    from app.services.email_account import get_default_account, _decrypt_password
 
     if not body.to:
         raise HTTPException(status_code=400, detail="收件人不能为空")
+
+    # 解析 SMTP 配置: 优先用默认账户
+    smtp_host = user.smtp_host
+    smtp_port = user.smtp_port
+    smtp_ssl = user.smtp_ssl
+    smtp_username = user.smtp_username or user.email
+    smtp_password = user.smtp_password_enc or ""
+
+    acc = await get_default_account(db, user.id)
+    if acc and acc.smtp_host:
+        smtp_host = acc.smtp_host
+        smtp_port = acc.smtp_port
+        smtp_ssl = acc.smtp_ssl
+        smtp_username = acc.smtp_username or acc.email
+        smtp_password = _decrypt_password(acc.smtp_password_enc) if acc.smtp_password_enc else ""
 
     try:
         result = await send_email(
@@ -337,6 +384,12 @@ async def send_mail(
             bcc=body.bcc,
             reply_to=body.reply_to,
             in_reply_to=body.in_reply_to,
+            # Override SMTP config
+            _smtp_host=smtp_host,
+            _smtp_port=smtp_port,
+            _smtp_ssl=smtp_ssl,
+            _smtp_username=smtp_username,
+            _smtp_password=smtp_password,
         )
         return result
     except Exception as e:
