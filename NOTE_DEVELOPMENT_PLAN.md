@@ -86,7 +86,7 @@ curl -X POST https://minimail.dev/api/notes/search/semantic \
 - Agent 通过 `GET /api/notes/search?q=` 检索
 
 **Phase B — 语义检索（P1）**
-- 接入 Minimail 后端 AI 推理端点（已有 `<llm-endpoint>`）
+- 接入 Minimail 后端 AI 推理端点（可配置, `<llm-endpoint>`）
 - 笔记内容经过 embedding 模型转为向量
 - 使用 pgvector 扩展存储向量
 - Agent 通过 `POST /api/notes/search/semantic` 执行相似度搜索

@@ -168,7 +168,7 @@ npx vite --host 0.0.0.0 --port 5173
 | ORM | **SQLAlchemy 2.0** (async) + Alembic |
 | 数据库 | **PostgreSQL 16** + pgvector (语义搜索) |
 | 向量搜索 | **pgvector** (`ivfflat` 索引) (P1) |
-| 嵌入模型 | 已有 LLM 推理端点 (`<llm-endpoint>`) |
+| 嵌入模型 | LLM 推理端点 (可配置) |
 | 缓存 | Redis 7 (可选) |
 | 前端 | **React 19** + **TypeScript 5** + **Vite 6** |
 | 样式 | **Tailwind CSS 4** |
