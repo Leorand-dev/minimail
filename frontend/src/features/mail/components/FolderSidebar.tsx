@@ -6,6 +6,7 @@ import type { Folder } from '@/api/mail';
 import { fetchImapStatus, fetchAccountFolders, folderDisplayName } from '@/api/mail';
 import type { ImapStatus, AccountFolderGroup } from '@/api/mail';
 import api from '@/api/client';
+import { useNotesStore, type NoteView } from '@/stores/memos';
 
 interface FolderSidebarProps {
   className?: string;
@@ -175,7 +176,28 @@ export default function FolderSidebar({ className = '', onSelectFolder }: Folder
             onSelectFolder?.();
           }} />
           <NavItem icon="👤" label="通讯录" onClick={() => setActiveView('contacts')} />
-          <NavItem icon="📝" label="笔记库" onClick={() => setActiveView('memos')} />
+        </div>
+      </div>
+
+      {/* ═══ 笔记库 (独立大类) ═══ */}
+      <div className="border-t border-gray-200 mx-3" />
+      <NotesSection
+        activeView={activeView}
+        noteView={useNotesStore((s) => s.noteView)}
+        sidebarExpanded={useNotesStore((s) => s.sidebarExpanded)}
+        onToggle={() => {
+          const s = useNotesStore.getState();
+          s.setSidebarExpanded(!s.sidebarExpanded);
+        }}
+        onSelectView={(view) => {
+          useNotesStore.getState().setNoteView(view);
+          setActiveView('memos');
+        }}
+      />
+
+      <div className="border-t border-gray-200 mx-3" />
+      <div className="px-3 pt-2 pb-1">
+        <div className="flex flex-col gap-0.5">
           <NavItem icon="🔑" label="API 密钥" onClick={() => setActiveView('apikeys')} />
           <NavItem icon="📄" label="API 文档" onClick={() => setActiveView('docs')} />
           <NavItem icon="⚙️" label="设置" onClick={() => setActiveView('settings')} />
@@ -267,6 +289,57 @@ export default function FolderSidebar({ className = '', onSelectFolder }: Folder
         </button>
       </div>
     </aside>
+  );
+}
+
+/** 笔记库侧栏大类 */
+function NotesSection({
+  activeView,
+  noteView,
+  sidebarExpanded,
+  onToggle,
+  onSelectView,
+}: {
+  activeView: string;
+  noteView: NoteView;
+  sidebarExpanded: boolean;
+  onToggle: () => void;
+  onSelectView: (view: NoteView) => void;
+}) {
+  const items: { view: NoteView; icon: string; label: string }[] = [
+    { view: 'list',     icon: '📋', label: '所有笔记' },
+    { view: 'tags',     icon: '🏷️', label: '标签管理' },
+    { view: 'settings',  icon: '⚙️', label: '设置' },
+  ];
+
+  return (
+    <div className="px-2 py-1">
+      {/* 标题行: 点击展开/折叠 */}
+      <div
+        onClick={onToggle}
+        className="flex items-center gap-2 px-2 py-1.5 cursor-pointer text-sm rounded hover:bg-gray-200 select-none"
+      >
+        <span className="text-xs text-gray-400 w-4 flex-shrink-0">
+          {sidebarExpanded ? '▼' : '▶'}
+        </span>
+        <span className="text-sm font-semibold text-gray-700">📝 笔记库</span>
+      </div>
+
+      {/* 子项列表: 展开时显示 */}
+      {sidebarExpanded && (
+        <div className="ml-5 space-y-0.5 mt-0.5">
+          {items.map((item) => (
+            <NavItem
+              key={item.view}
+              icon={item.icon}
+              label={item.label}
+              active={activeView === 'memos' && noteView === item.view}
+              onClick={() => onSelectView(item.view)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

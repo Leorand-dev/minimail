@@ -5,6 +5,9 @@
 import { create } from 'zustand';
 import type { Note, NoteTag } from '@/api/memos';
 
+/** 笔记库子视图 */
+export type NoteView = 'list' | 'tags' | 'settings';
+
 interface NotesState {
   notes: Note[];
   tags: NoteTag[];
@@ -12,6 +15,8 @@ interface NotesState {
   searchQuery: string;
   loading: boolean;
   editingNote: Note | null;  // null = 新建模式
+  noteView: NoteView;        // 笔记库子视图
+  sidebarExpanded: boolean;  // 侧栏笔记库展开/折叠
 
   setNotes: (notes: Note[]) => void;
   setTags: (tags: NoteTag[]) => void;
@@ -19,6 +24,8 @@ interface NotesState {
   setSearchQuery: (q: string) => void;
   setLoading: (v: boolean) => void;
   setEditingNote: (note: Note | null) => void;
+  setNoteView: (v: NoteView) => void;
+  setSidebarExpanded: (v: boolean) => void;
   updateNoteInList: (note: Note) => void;
   removeNoteFromList: (id: string) => void;
 }
@@ -30,6 +37,8 @@ export const useNotesStore = create<NotesState>((set) => ({
   searchQuery: '',
   loading: false,
   editingNote: null,
+  noteView: 'list',
+  sidebarExpanded: true,
 
   setNotes: (notes) => set({ notes }),
   setTags: (tags) => set({ tags }),
@@ -37,6 +46,8 @@ export const useNotesStore = create<NotesState>((set) => ({
   setSearchQuery: (q) => set({ searchQuery: q }),
   setLoading: (v) => set({ loading: v }),
   setEditingNote: (n) => set({ editingNote: n }),
+  setNoteView: (v) => set({ noteView: v }),
+  setSidebarExpanded: (v) => set({ sidebarExpanded: v }),
 
   updateNoteInList: (note) =>
     set((s) => ({
