@@ -61,7 +61,16 @@ export default function MessageList({ className = '', onSelectMessage }: Message
         const res = await api.get('/mail/demo');
         const details = res.data.details || {};
         const detail = details[msg.uid];
-        if (detail) setPreviewMessage(detail);
+        if (detail) {
+          setPreviewMessage(detail);
+          // 标记本地消息为已读
+          if (!msg.is_read) {
+            const updated = useMailStore.getState().messages.map((m) =>
+              m.uid === msg.uid ? { ...m, is_read: true, flags: [...(m.flags || []), '\Seen'] } : m
+            );
+            useMailStore.getState().setMessages(updated, useMailStore.getState().totalMessages, useMailStore.getState().page, useMailStore.getState().totalPages);
+          }
+        }
       } catch {}
     }
   };
