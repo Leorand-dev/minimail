@@ -24,6 +24,9 @@ class User(Base):
     email: Mapped[str] = mapped_column(
         String(320), unique=True, index=True, nullable=False
     )
+    username: Mapped[str] = mapped_column(
+        String(64), unique=True, index=True, nullable=False, default=""
+    )
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     name: Mapped[str] = mapped_column(String(128), nullable=False, default="")
 

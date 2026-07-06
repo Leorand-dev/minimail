@@ -48,6 +48,16 @@ async def init_db() -> None:
         # 创建所有表 (新连接)
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+
+        # 迁移: 添加 username 列 (如果不存在)
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text(
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(64) UNIQUE DEFAULT ''"
+                ))
+        except Exception:
+            pass
+
         logger.info("数据库表已创建/验证")
     except Exception as e:
         logger.warning("数据库表创建失败: %s", e)

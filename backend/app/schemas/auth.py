@@ -41,6 +41,7 @@ class RefreshRequest(BaseModel):
 class UserResponse(BaseModel):
     id: UUID
     email: str
+    username: str
     name: str
     language: str
     theme: str

@@ -83,8 +83,10 @@ async def register_user(
     if existing.scalar_one_or_none():
         raise ValueError("该邮箱已被注册")
 
+    username = request.email.split("@")[0]
     user = User(
         email=request.email,
+        username=username,
         password_hash=hash_password(request.password),
         name=request.name,
     )
@@ -104,12 +106,18 @@ async def register_user(
 async def login_user(
     db: AsyncSession, request: LoginRequest
 ) -> TokenResponse:
-    """用户登录."""
+    """用户登录 (支持邮箱或用户名)."""
+    # 先按邮箱查找
     result = await db.execute(select(User).where(User.email == request.email))
     user = result.scalar_one_or_none()
 
+    # 再按用户名查找
+    if not user:
+        result = await db.execute(select(User).where(User.username == request.email))
+        user = result.scalar_one_or_none()
+
     if not user or not verify_password(request.password, user.password_hash):
-        raise ValueError("邮箱或密码错误")
+        raise ValueError("邮箱/用户名或密码错误")
 
     access_token = create_access_token(user.id)
     refresh_token = create_refresh_token(user.id)

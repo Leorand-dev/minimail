@@ -3,6 +3,7 @@ import api from '@/api/client';
 export interface UserProfile {
   id: string;
   email: string;
+  username: string;
   name: string;
   language: string;
   theme: string;

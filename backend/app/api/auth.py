@@ -28,6 +28,52 @@ from app.services.auth import (
 router = APIRouter(tags=["auth"])
 
 
+@router.get("/setup/status", summary="检查是否需要首次设置")
+async def setup_status(db: AsyncSession = Depends(get_db)):
+    """检查系统中是否存在管理员用户。没有则返回 needs_setup=true。"""
+    from sqlalchemy import select, func
+    from app.models.user import User
+    result = await db.execute(select(func.count()).select_from(User))
+    count = result.scalar()
+    return {"needs_setup": count == 0}
+
+
+@router.post("/setup", summary="首次部署管理员初始化", status_code=201)
+async def setup_admin(
+    request: RegisterRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """首次部署时设置管理员用户 (用户名+密码)。已有用户则拒绝。"""
+    from sqlalchemy import select, func
+    from app.models.user import User
+    result = await db.execute(select(func.count()).select_from(User))
+    count = result.scalar()
+    if count > 0:
+        raise HTTPException(status_code=400, detail="系统中已存在用户, 无需再次设置")
+
+    from passlib.context import CryptContext
+    pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+    username = request.email.split("@")[0]
+    user = User(
+        email=request.email or f"{username}@minimail.local",
+        username=username,
+        password_hash=pwd.hash(request.password),
+        name=request.name or username,
+    )
+    db.add(user)
+    await db.flush()
+
+    from app.services.auth import create_access_token, create_refresh_token, TokenResponse, UserResponse
+    access_token = create_access_token(user.id)
+    refresh_token = create_refresh_token(user.id)
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        user=UserResponse.model_validate(user),
+    )
+
+
 @router.post(
     "/register",
     response_model=TokenResponse,
