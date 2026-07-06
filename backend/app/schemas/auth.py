@@ -61,3 +61,23 @@ class TokenResponse(BaseModel):
 
 class ErrorResponse(BaseModel):
     detail: str
+
+
+class UpdateProfileRequest(BaseModel):
+    name: str = Field("", max_length=128, description="新显示名称")
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(..., min_length=1, description="当前密码")
+    new_password: str = Field(..., min_length=8, max_length=128, description="新密码")
+
+    @field_validator("new_password")
+    @classmethod
+    def new_password_strength(cls, v: str) -> str:
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("新密码必须包含至少一个大写字母")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("新密码必须包含至少一个小写字母")
+        if not re.search(r"\d", v):
+            raise ValueError("新密码必须包含至少一个数字")
+        return v

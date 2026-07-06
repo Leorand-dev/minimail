@@ -9,6 +9,8 @@ import ComposeContent from '@/features/compose/ComposePage';
 import SettingsContent from '@/features/settings/SettingsPage';
 import ContactsContent from '@/features/contacts/ContactsPage';
 import ApiKeysContent from '@/features/api-keys/ApiKeysPanel';
+import UserMenu from '@/features/user/UserMenu';
+import ProfilePanel from '@/features/user/ProfilePanel';
 
 /** Header titles & actions for each view */
 const VIEW_CONFIG: Record<string, { title: string; icon: string }> = {
@@ -17,6 +19,7 @@ const VIEW_CONFIG: Record<string, { title: string; icon: string }> = {
   settings: { title: '设置',      icon: '⚙️' },
   contacts: { title: '通讯录',    icon: '👤' },
   apikeys:  { title: 'API 密钥', icon: '🔑' },
+  profile:  { title: '个人信息',  icon: '👤' },
 };
 
 export default function MailLayout() {
@@ -104,6 +107,7 @@ export default function MailLayout() {
               发送
             </button>
           )}
+          <UserMenu />
         </header>
       )}
 
@@ -125,6 +129,7 @@ export default function MailLayout() {
         {activeView === 'settings' && <SettingsContent onBack={() => setActiveView('mail')} />}
         {activeView === 'contacts' && <ContactsContent onBack={() => setActiveView('mail')} />}
         {activeView === 'apikeys' && <ApiKeysContent />}
+        {activeView === 'profile' && <ProfilePanel />}
       </div>
 
       {/* ═══ 底部导航 (手机) ═══ */}

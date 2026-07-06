@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useMailStore } from '@/stores/mail';
+import UserMenu from '@/features/user/UserMenu';
 
 export default function Toolbar() {
   const setActiveView = useMailStore((s) => s.setActiveView);
@@ -93,6 +94,7 @@ export default function Toolbar() {
       <span className="text-xs text-gray-400 hidden md:inline">
         {currentFolder} · {totalMessages} 封
       </span>
+      <UserMenu />
     </header>
   );
 }

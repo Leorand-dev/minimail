@@ -2,8 +2,8 @@ import { create } from 'zustand';
 import type { Folder, MessageSummary, MessageDetail } from '@/api/mail';
 
 export type Pane = 'folders' | 'list' | 'preview';
-/** 邮件页主视图: mail=收件箱, compose=撰写, settings=设置, contacts=通讯录, apikeys=API密钥 */
-export type MailView = 'mail' | 'compose' | 'settings' | 'contacts' | 'apikeys';
+/** 邮件页主视图 */
+export type MailView = 'mail' | 'compose' | 'settings' | 'contacts' | 'apikeys' | 'profile';
 
 /** 撰写页预填充数据 (回复/转发) */
 export interface ComposePrefill {
@@ -14,6 +14,7 @@ export interface ComposePrefill {
   body: string;
   from_addr?: string;
   in_reply_to?: string;
+  references?: string;
 }
 
 interface MailState {
@@ -23,27 +24,30 @@ interface MailState {
   totalMessages: number;
   page: number;
   totalPages: number;
+  loading: boolean;
+  error: string | null;
+  searchQuery: string;
+  activePane: Pane;
+  activeView: MailView;
+  selectedMessage: MessageDetail | null;
   selectedUid: number | null;
   previewMessage: MessageDetail | null;
-  searchQuery: string;
-  loading: boolean;
-  activePane: Pane;
-  error: string | null;
-  activeView: MailView;
   composePrefill: ComposePrefill | null;
 
   setFolders: (folders: Folder[]) => void;
-  setCurrentFolder: (folder: string) => void;
-  setMessages: (messages: MessageSummary[], total: number, page: number, totalPages: number) => void;
+  setMessages: (messages: MessageSummary[], total?: number, page?: number, totalPages?: number) => void;
+  setTotalMessages: (n: number) => void;
+  setCurrentFolder: (f: string) => void;
+  setPage: (p: number) => void;
+  setLoading: (v: boolean) => void;
+  setError: (e: string | null) => void;
+  setSearchQuery: (q: string) => void;
+  setActivePane: (p: Pane) => void;
+  setActiveView: (v: MailView) => void;
+  setSelectedMessage: (m: MessageDetail | null) => void;
   setSelectedUid: (uid: number | null) => void;
-  setPreviewMessage: (msg: MessageDetail | null) => void;
-  setSearchQuery: (query: string) => void;
-  setLoading: (loading: boolean) => void;
-  setActivePane: (pane: Pane) => void;
-  setError: (error: string | null) => void;
-  setPage: (page: number) => void;
-  setActiveView: (view: MailView) => void;
-  setComposePrefill: (data: ComposePrefill | null) => void;
+  setPreviewMessage: (m: MessageDetail | null) => void;
+  setComposePrefill: (p: ComposePrefill | null) => void;
 }
 
 export const useMailStore = create<MailState>((set) => ({
@@ -53,26 +57,29 @@ export const useMailStore = create<MailState>((set) => ({
   totalMessages: 0,
   page: 1,
   totalPages: 1,
+  loading: false,
+  error: null,
+  searchQuery: '',
+  activePane: 'list',
+  activeView: 'mail',
+  selectedMessage: null,
   selectedUid: null,
   previewMessage: null,
-  searchQuery: '',
-  loading: false,
-  activePane: 'list',
-  error: null,
-  activeView: 'mail',
   composePrefill: null,
 
-  setFolders: (folders) => set({ folders, activeView: 'mail' }),
-  setCurrentFolder: (folder) => set({ currentFolder: folder, page: 1, selectedUid: null, previewMessage: null }),
+  setFolders: (folders) => set({ folders }),
   setMessages: (messages, total, page, totalPages) =>
-    set({ messages, totalMessages: total, page, totalPages }),
-  setSelectedUid: (uid) => set({ selectedUid: uid }),
-  setPreviewMessage: (msg) => set({ previewMessage: msg }),
-  setSearchQuery: (query) => set({ searchQuery: query }),
-  setLoading: (loading) => set({ loading }),
-  setActivePane: (pane) => set({ activePane: pane }),
-  setError: (error) => set({ error }),
+    set({ messages, totalMessages: total ?? 0, page: page ?? 1, totalPages: totalPages ?? 1 }),
+  setTotalMessages: (n) => set({ totalMessages: n }),
+  setCurrentFolder: (currentFolder) => set({ currentFolder, page: 1 }),
   setPage: (page) => set({ page }),
-  setActiveView: (view) => set({ activeView: view }),
-  setComposePrefill: (data) => set({ composePrefill: data }),
+  setLoading: (loading) => set({ loading }),
+  setError: (error) => set({ error }),
+  setSearchQuery: (searchQuery) => set({ searchQuery, page: 1 }),
+  setActivePane: (activePane) => set({ activePane }),
+  setActiveView: (activeView) => set({ activeView, selectedMessage: null, previewMessage: null }),
+  setSelectedMessage: (selectedMessage) => set({ selectedMessage }),
+  setSelectedUid: (selectedUid) => set({ selectedUid }),
+  setPreviewMessage: (previewMessage) => set({ previewMessage }),
+  setComposePrefill: (composePrefill) => set({ composePrefill }),
 }));
