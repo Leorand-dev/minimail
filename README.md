@@ -1,6 +1,6 @@
-# Minimail — 智能邮件系统
+# Minimail — AI Agent 驱动的邮件与知识管理平台
 
-基于 [Roundcube Webmail](https://github.com/roundcube/roundcubemail) 架构分析构建的新一代邮件系统，融合 **AI Agent 自动化操作**能力。
+> 融合 **邮件** · **笔记库** · **知识库** 为一体，通过统一的 **Agent API** 让 AI 智能体自主操作一切。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/Python-3.11+-blue)
@@ -9,79 +9,117 @@
 
 ---
 
-## 简介
+## 📌 概述
 
-Minimail 是一个具备完整邮件能力的 Web 邮件客户端，支持 IMAP 收件、SMTP 发件、通讯录管理、API 授权管理等功能。所有功能在单一页面内完成，左侧功能导航、右侧内容区动态切换。
+Minimail 是一个**面向 AI Agent 时代**的全栈平台，以邮件为核心，逐步扩展为个人知识管理中枢：
+
+- **📧 邮件系统** — 全功能 IMAP/SMTP 邮件客户端（类 Roundcube）
+- **📝 笔记库 (Note)** — Markdown 原生笔记，支持标签/搜索/置顶/归档
+- **🧠 知识储备** — 笔记内容向量化，Agent 可语义检索作为上下文
+- **🤖 Agent API** — 统一的 REST API，AI Agent 通过 API 密钥自主操作全部功能
+
+Agent（Hermes / Claude Code / OpenAI Codex 等）是 Minimail 的**一等公民**——不仅用户能使用，Agent 也能通过 API 读写邮件、记录笔记、检索知识。
 
 ---
 
-## AI Agent 集成
+## 🔥 AI Agent 集成
 
-Minimail 提供标准的 REST API，任何 AI 智能体（如 **OpenClaw**、**Hermes Agent**、**Claude Code**、**OpenAI GPT**、**DeepSeek** 等）可通过 **API 密钥** 直接操作邮件系统。
+Minimail 所有功能均通过 REST API 暴露，**统一受 API 密钥保护**。Agent 持密钥即可自主完成日常工作。
 
-### 能力
+### Agent 能力全景
 
-| 能力 | 说明 |
-|------|------|
-| 📥 **邮件读取** | 列文件夹、搜索邮件、获取详情、下载附件 |
-| ✉️ **邮件发送** | 创建并发送邮件（单发/群发/Cc/Bcc） |
-| 🗂️ **文件夹管理** | 新建/重命名/删除文件夹 |
-| 👤 **通讯录管理** | 添加/查询/编辑/删除联系人 |
-| 🔑 **API 密钥管理** | 通过 API 密钥页面创建，Agent 持有密钥即可调用所有接口 |
+| 领域 | 能力 | API 端点 |
+|------|------|----------|
+| 📥 **邮件** | 读取/搜索/发送/删除/移动 | `GET/POST /api/mail/*` |
+| 📝 **笔记** | 创建/查询/搜索/更新/归档 | `GET/POST/PUT/DELETE /api/notes/*` |
+| 🔍 **知识检索** | 全文搜索 + 语义向量搜索 | `GET /api/notes/search`, `POST /api/notes/search/semantic` |
+| 👤 **通讯录** | 联系人 CRUD | `GET/POST/PUT/DELETE /api/contacts/*` |
+| 🔑 **自身管理** | API 密钥创建/撤销 | `POST/DELETE /api/auth/tokens` |
 
-### 使用方式
-
-1. 登录 Minimail → 左侧 **🔑 API 密钥** → 新建密钥
-2. 复制生成的令牌（如 `wm_a3f8c2b1...`）
-3. 在 Agent 的 HTTP 请求的 Header 中添加：
-
-```http
-X-API-Key: wm_a3f8c2b1e9d0...
-```
-
-示例 — 用 curl 读取收件箱：
+### Agent 工作流示例
 
 ```bash
-curl -H "X-API-Key: wm_a3f8c2b1..." \
-  http://localhost:8000/api/mail/folders
+# 1. Agent 登录并获取令牌
+TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/login \
+  -d '{"email":"agent@example.com","password":"***"}' \
+  -H "Content-Type: application/json" | jq -r '.access_token')
+
+# 2. Agent 查询收件箱
+curl -s -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8000/api/mail/messages?folder=INBOX
+
+# 3. Agent 记录决策到笔记库
+curl -s -X POST http://localhost:8000/api/notes \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "# 架构决策记录\n\n## 2026-07-06 数据库选型\n\n决定使用 PostgreSQL 16，原因：...",
+    "tags": ["adr", "database"]
+  }'
+
+# 4. Agent 语义搜索笔记库
+curl -s -X POST http://localhost:8000/api/notes/search/semantic \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "如何配置 IMAP 连接", "top_k": 3}'
 ```
 
-Agent 通过 API 密钥认证后，拥有与 Web 用户相同的邮件操作权限，可编程完成收发邮件、整理文件夹、同步通讯录等全部操作。
+### 认证方式
+
+```
+Authorization: Bearer <api-token>    # Agent 持有令牌
+X-API-Key: wm_xxx                    # 或 API 密钥头
+```
+
+Agent 持有令牌后拥有与 Web 用户**相同的权限模型**，无需额外配置。
 
 ---
 
-## 功能
+## ✨ 功能
+
+### 📧 邮件系统
 
 | 功能 | 说明 |
 |------|------|
-| 📥 **收件箱** | IMAP 三栏布局、文件夹树、邮件列表、预览面板、搜索、分页、星标/标记已读 |
-| ✏️ **写邮件** | 宽屏自适应、收件人格式校验、收件人自动完成 (通讯录联动)、附件下载、**回复/转发/全部回复** |
-| ⚙️ **设置** | IMAP / SMTP 配置、密码加密存储、连接测试、**多邮箱账户管理** (添加/删除/设默认) |
-| 👤 **通讯录** | 联系人 CRUD、分组管理、搜索防抖、编辑 |
-| 🔑 **API 密钥** | 令牌创建/撤销/过期管理、一次性展示、范围控制 |
-| 🚪 **登录/注册** | JWT 双令牌、自动续期、持久登录 |
+| **三栏布局** | 文件夹树 → 邮件列表 → 预览面板，多邮箱账户统一收件箱 |
+| **IMAP 支持** | 连接池、SSL/TLS、多账户并行连接、文件夹订阅、增删文件夹 |
+| **SMTP 发送** | 富文本编辑器 (TipTap)、HTML 邮件、附件、回复/转发/全部回复 |
+| **搜索增强** | 关键词高亮、日期范围筛选、仅未读筛选 |
+| **多账户** | 多邮箱管理、独立 IMAP/SMTP 配置、统一收件箱聚合 |
+| **通讯录** | 联系人 CRUD、分组管理、搜索防抖、写邮件自动完成 |
+| **IMAP 状态** | 实时连接状态、最后同步时间、手动刷新 |
 
-### 最近更新
+### 📝 笔记库 (Note)
 
-| 更新 | 说明 |
+| 功能 | 说明 |
 |------|------|
-| 🏷️ **多邮箱账户** | 支持添加多个邮箱账户、设默认、独立 IMAP/SMTP 配置 |
-| ↩️ **回复/转发** | 预览面板一键回复/全部回复/转发，自动预填收件人+引用原文 |
-| 📎 **附件下载** | 预览面板附件点击直接下载 |
-| 🎨 **统一 Header** | 所有页面顶部 55px 统一工具栏，含 Logo + 页面标题 + 操作按钮 |
-| 📱 **响应式** | 写邮件页全宽自适应、手机端侧栏自动隐藏 |
-| 🧠 **智能错误提示** | 无账户提示"请添加邮箱账户"，网络失败提示"请检查网络" |
+| **Markdown 编辑** | TipTap WYSIWYG + Markdown 源码双模式 |
+| **时间线** | 按创建时间倒序，卡片式列表 |
+| **标签系统** | `#tag` 自动提取，侧栏过滤 |
+| **置顶/归档** | 重要笔记置顶，归档笔记可恢复 |
+| **可见性** | Private / Public 两级控制 |
+| **AI 语义检索** | 笔记向量化，Agent 可语义搜索 |
+
+### 🔗 知识库 (Knowledge Base)
+
+| 功能 | 说明 |
+|------|------|
+| **全文检索** | PostgreSQL tsvector 中文分词全文索引 |
+| **语义搜索** | pgvector 向量索引 + 嵌入模型 (P1) |
+| **Agent 上下文** | Agent 在对话中自动检索笔记库作为参考 |
+| **邮件 → 笔记** | 一键将邮件转为笔记归档 (P2) |
+
+### 🛡️ Agent API
+
+| 功能 | 说明 |
+|------|------|
+| **统一认证** | JWT + API 密钥双通道 |
+| **全功能暴露** | 邮件/笔记/通讯录/设置全部可 API 操作 |
+| **范围控制** | API 密钥可限定权限范围 |
 
 ---
 
-## 快速开始
-
-### 前置条件
-
-- Python 3.11+
-- Node.js 20+
-- Docker (PostgreSQL + Redis)
-- IMAP / SMTP 邮箱账号
+## 🚀 快速开始
 
 ```bash
 # 克隆
@@ -104,71 +142,113 @@ npm install
 npx vite --host 0.0.0.0 --port 5173
 ```
 
-访问 **http://localhost:5173** → 注册账号 → 在设置中配置 IMAP/SMTP 后即可收发邮件。
+访问 **http://localhost:5173** → 注册账号 → 开始使用。
 
 ---
 
-## 本地开发
-
-```bash
-make dev           # 一键启动前后端 + 数据库
-make dev-backend   # 仅后端
-make dev-frontend  # 仅前端
-make migrate       # 数据库迁移
-```
-
----
-
-## 技术栈
+## 🧰 技术栈
 
 | 层 | 选型 |
 |------|------|
-| 后端框架 | FastAPI (Python 3.11+, async) |
-| ORM | SQLAlchemy 2.0 (async) + Alembic |
-| 数据库 | PostgreSQL 16 |
+| 后端框架 | **FastAPI** (Python 3.11+, async) |
+| ORM | **SQLAlchemy 2.0** (async) + Alembic |
+| 数据库 | **PostgreSQL 16** + pgvector (语义搜索) |
+| 向量搜索 | **pgvector** (`ivfflat` 索引) (P1) |
+| 嵌入模型 | 已有 LLM 推理端点 (`<llm-endpoint>`) |
 | 缓存 | Redis 7 (可选) |
-| API 认证 | JWT (双令牌: access + refresh) |
-| 前端 | React 19 + TypeScript 5 + Vite 6 |
-| 样式 | Tailwind CSS 4 |
-| 状态管理 | Zustand |
+| 前端 | **React 19** + **TypeScript 5** + **Vite 6** |
+| 样式 | **Tailwind CSS 4** |
+| 状态管理 | **Zustand** |
 | 邮件协议 | aioimaplib (IMAP), aiosmtplib (SMTP) |
-| 密码加密 | Fernet (symmetric) |
+| 密码加密 | Fernet (对称加密) |
+| 认证 | JWT (双令牌: access + refresh) + API Key |
 | 部署 | Docker Compose |
 
 ---
 
-## 项目结构
+## 📂 项目结构
 
 ```
-webmail/
-├── backend/                    # FastAPI 异步后端
+minimail/
+├── backend/                           # FastAPI 异步后端
 │   └── app/
-│       ├── api/                # REST 路由 (auth/settings/mail/contacts/tokens)
-│       ├── services/           # 业务逻辑 (IMAP/SMTP/联系人/令牌)
-│       ├── models/             # SQLAlchemy ORM 模型
-│       ├── schemas/            # Pydantic 通信模型
-│       ├── imap/               # IMAP 协议层 (连接池/解析/搜索)
-│       ├── database.py         # 数据库引擎 & 自动建表
-│       └── main.py             # 应用入口
-├── frontend/                   # React SPA
+│       ├── api/                       # REST 路由
+│       │   ├── auth.py               # 认证
+│       │   ├── mail.py               # 邮件 (IMAP/SMTP)
+│       │   ├── memos.py              # 笔记库 CRUD + 搜索
+│       │   ├── contacts.py           # 通讯录
+│       │   ├── email_accounts.py     # 邮箱账户管理
+│       │   ├── api_tokens.py         # API 密钥
+│       │   └── settings.py           # 系统设置
+│       ├── services/
+│       │   ├── smtp_service.py        # SMTP 发送
+│       │   └── embedding.py          # 向量嵌入服务 (P1)
+│       ├── models/                    # SQLAlchemy ORM
+│       │   ├── user.py
+│       │   ├── note.py               # 笔记表 + 标签 + 反应
+│       │   └── email_account.py
+│       ├── schemas/                   # Pydantic 通信模型
+│       │   └── memo.py               # 笔记请求/响应
+│       ├── imap/                      # IMAP 协议层
+│       │   ├── connection.py         # 连接池
+│       │   ├── message.py            # 邮件解析/搜索
+│       │   └── types.py              # Pydantic 邮件模型
+│       ├── database.py               # 数据库引擎 & 迁移
+│       └── main.py                   # 应用入口
+├── frontend/                          # React SPA
 │   └── src/
-│       ├── features/           # 功能模块 (mail/compose/settings/contacts/api-keys/auth)
-│       ├── stores/             # Zustand 状态管理
-│       ├── api/                # API 客户端 (含自动刷新 token)
-│       ├── components/         # 通用组件
-│       └── App.tsx             # 路由配置
-├── docker/                     # Docker Compose
-├── docs/                       # 文档
-├── DEVELOPMENT_PLAN.md         # 完整开发计划
-└── DEVELOPMENT_ROADMAP.md      # 开发路线图
+│       ├── features/
+│       │   ├── mail/                 # 邮件 (三栏布局)
+│       │   ├── memos/                # 笔记库 (时间线 + 编辑器)
+│       │   ├── compose/              # 写邮件 (富文本编辑器)
+│       │   ├── settings/             # 设置面板
+│       │   └── contacts/             # 通讯录
+│       ├── stores/                   # Zustand 状态管理
+│       │   ├── mail.ts
+│       │   ├── memos.ts              # 笔记库状态
+│       │   └── auth.ts
+│       ├── api/                      # API 客户端
+│       │   ├── mail.ts
+│       │   ├── memos.ts              # 笔记 API
+│       │   └── contacts.ts
+│       └── App.tsx                   # 路由 + 统一布局
+├── docker/
+├── docs/
+│   └── agent-notes.md               # Agent 笔记操作指南 (P1)
+├── NOTE_DEVELOPMENT_PLAN.md          # 笔记库完整开发方案
+└── DEVELOPMENT_ROADMAP.md            # 开发路线图
 ```
 
 ---
 
-## 许可证
+## 🗺️ 路线图
+
+| 阶段 | 内容 | 状态 |
+|------|------|:----:|
+| Phase 0-4 | 邮件系统核心（IMAP/SMTP/通讯录/发送/设置） | ✅ 完成 |
+| UI 审计 | 统一 Header/侧栏/智能错误/API 文档 | ✅ 完成 |
+| v0.12 | 路径修复/IMAP 状态/富文本/搜索增强/UI 优化 | ✅ 完成 |
+| **笔记库 Phase 1** | 数据模型 + CRUD API | 📋 计划中 |
+| **笔记库 Phase 2** | AI Agent 集成 + 语义检索 | 📋 计划中 |
+| **笔记库 Phase 3** | 前端时间线 + 编辑器 | 📋 计划中 |
+| 附件管理 | 预览面板附件下载 | 📋 计划中 |
+| 邮箱设置向导 | 自动检测 IMAP/SMTP | 📋 计划中 |
+
+详细计划见 [`NOTE_DEVELOPMENT_PLAN.md`](NOTE_DEVELOPMENT_PLAN.md) · [`DEVELOPMENT_ROADMAP.md`](DEVELOPMENT_ROADMAP.md)
+
+---
+
+## 🤝 贡献
+
+欢迎提交 Issue 和 PR。开发前请阅读开发计划文档。
+
+---
+
+## 📄 许可证
 
 [MIT](LICENSE)
 
 ## 参考
 
-- [Roundcube Webmail](https://github.com/roundcube/roundcubemail) — 架构来源
+- [Roundcube Webmail](https://github.com/roundcube/roundcubemail) — 邮件架构参考
+- [Memos](https://github.com/usememos/memos) — 笔记架构参考
