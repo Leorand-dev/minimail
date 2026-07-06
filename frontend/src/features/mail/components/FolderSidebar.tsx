@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMailStore } from '@/stores/mail';
 import { useAuthStore } from '@/stores/auth';
 import type { Folder } from '@/api/mail';
-import { fetchImapStatus, fetchAccountFolders } from '@/api/mail';
+import { fetchImapStatus, fetchAccountFolders, folderDisplayName } from '@/api/mail';
 import type { ImapStatus, AccountFolderGroup } from '@/api/mail';
 import api from '@/api/client';
 
@@ -28,8 +28,7 @@ function FolderItem({
     folder.name === 'Drafts' ? '📝' :
     folder.name === 'Junk' || folder.name === 'Spam' ? '⚠️' :
     folder.name === 'Trash' ? '🗑️' :
-    folder.name === 'Archive' ? '📦' :
-    folder.is_container ? '📂' : '📁';
+    folder.name === 'Archive' ? '📦' : '📁';
 
   return (
     <div
@@ -42,7 +41,7 @@ function FolderItem({
       style={{ paddingLeft: `${12 + depth * 16}px` }}
     >
       <span className="flex-shrink-0">{icon}</span>
-      <span className="truncate flex-1">{folder.name}</span>
+      <span className="truncate flex-1">{folderDisplayName(folder.name)}</span>
       {folder.unseen > 0 && (
         <span className="flex-shrink-0 bg-[#066da5] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
           {folder.unseen > 99 ? '99+' : folder.unseen}
@@ -61,6 +60,7 @@ export default function FolderSidebar({ className = '', onSelectFolder }: Folder
   const setCurrentAccount = useMailStore((s) => s.setCurrentAccount);
   const currentFolder = useMailStore((s) => s.currentFolder);
   const setCurrentFolder = useMailStore((s) => s.setCurrentFolder);
+  const activeView = useMailStore((s) => s.activeView);
   const setActiveView = useMailStore((s) => s.setActiveView);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const unseenTotal = folders.reduce((sum, f) => sum + (f.unseen || 0), 0);
@@ -123,23 +123,9 @@ export default function FolderSidebar({ className = '', onSelectFolder }: Folder
     fetchImapStatus().then(setImapStatus).catch(() => {});
   }, [setAccountFolders]);
 
-  const handleSelectAccountInbox = (accountId: string | null) => {
-    setCurrentAccount(accountId);
-    setCurrentFolder('INBOX');
-    setActiveView('mail');
-    onSelectFolder?.();
-  };
-
   const handleSelectFolder = (accountId: string, folderName: string) => {
     setCurrentAccount(accountId);
     setCurrentFolder(folderName);
-    setActiveView('mail');
-    onSelectFolder?.();
-  };
-
-  const handleSelectUnifiedInbox = () => {
-    setCurrentAccount(null);
-    setCurrentFolder('INBOX');
     setActiveView('mail');
     onSelectFolder?.();
   };
@@ -183,7 +169,12 @@ export default function FolderSidebar({ className = '', onSelectFolder }: Folder
       {/* ═══ 功能导航 ═══ */}
       <div className="px-3 pb-1">
         <div className="flex flex-col gap-0.5">
-          <NavItem icon="📥" label="收件箱" active={false} onClick={() => setActiveView('mail')} />
+          <NavItem icon="📥" label="统一收件箱" active={activeView === 'mail' && currentAccount === null} onClick={() => {
+            setCurrentAccount(null);
+            setCurrentFolder('INBOX');
+            setActiveView('mail');
+            onSelectFolder?.();
+          }} />
           <NavItem icon="👤" label="通讯录" onClick={() => setActiveView('contacts')} />
           <NavItem icon="🔑" label="API 密钥" onClick={() => setActiveView('apikeys')} />
           <NavItem icon="📄" label="API 文档" onClick={() => setActiveView('docs')} />
@@ -193,24 +184,7 @@ export default function FolderSidebar({ className = '', onSelectFolder }: Folder
 
       <div className="border-t border-gray-200 mx-3" />
 
-      {/* ═══ 统一收件箱 ═══ */}
-      <div className="px-3 pt-2 pb-1">
-        <div
-          onClick={handleSelectUnifiedInbox}
-          className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer text-sm rounded ${
-            isUnifiedSelected
-              ? 'bg-[#d0e2f3] text-[#066da5] font-medium'
-              : 'text-gray-700 hover:bg-gray-100'
-          }`}
-        >
-          <span>📥</span>
-          <span className="font-medium">统一收件箱</span>
-        </div>
-      </div>
-
-      <div className="border-t border-gray-200 mx-3" />
-
-      {/* ═══ 账户文件夹 ═══ */}
+      {/* ═══ 邮箱账户列表 ═══ */}
       <div className="flex-1 overflow-y-auto">
         {accountFolders.length === 0 ? (
           <div className="px-3 py-3 space-y-2 animate-pulse">

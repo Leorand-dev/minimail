@@ -91,7 +91,7 @@ export async function fetchMessages(
 }
 
 export interface SearchFilters {
-  query: string;
+  query?: string;
   date_from?: string;
   date_to?: string;
   unread_only?: boolean;
@@ -102,12 +102,28 @@ export async function searchMessages(
   folder: string = 'INBOX',
   page: number = 1,
   pageSize: number = 50,
-  filters?: { date_from?: string; date_to?: string; unread_only?: boolean }
+  filters?: SearchFilters
 ): Promise<MessagesResponse> {
   const res = await api.get('/mail/messages/search', {
     params: { query, folder, page, page_size: pageSize, ...filters },
   });
   return res.data;
+}
+
+/** 文件夹名中文映射 */
+export function folderDisplayName(name: string): string {
+  const map: Record<string, string> = {
+    'INBOX': '收件箱',
+    'Sent': '已发送',
+    'Drafts': '草稿箱',
+    'Junk': '垃圾邮件',
+    'Spam': '垃圾邮件',
+    'Trash': '已删除',
+    'Archive': '归档',
+    'Outbox': '发件箱',
+    'Important': '重要',
+  };
+  return map[name] || name;
 }
 
 export async function fetchMessageDetail(folder: string, uid: number): Promise<MessageDetail> {
