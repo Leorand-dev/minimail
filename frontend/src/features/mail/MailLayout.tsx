@@ -38,27 +38,44 @@ export default function MailLayout() {
     if (initRef.current) return;
     initRef.current = true;
 
-    fetchFolders()
-      .then(setFolders)
-      .catch(async () => {
-        // IMAP 不可用 — 加载 demo 数据, 并标记不再尝试 IMAP
+    // 先尝试 demo (快速, 避免 IMAP 超时阻塞)
+    let demoLoaded = false;
+    (async () => {
+      try {
+        const res = await api.get('/mail/demo');
+        setFolders(res.data.folders);
+        setError(null);
+        const folderMsgs = res.data.messages?.messages || [];
+        const folder = 'inbox';
+        const filtered = folderMsgs;
+        setMessages(filtered, filtered.length, 1, 1);
+        demoLoaded = true;
+      } catch {}
+    })();
+
+    // 再尝试真实 IMAP (设 3 秒超时)
+    (async () => {
+      try {
+        const timeout = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('IMAP timeout')), 3000)
+        );
+        const realFolders = await Promise.race([fetchFolders(), timeout]);
+        if (realFolders && realFolders.length > 0) {
+          setFolders(realFolders);
+          skipImapRef.current = false;
+        }
+      } catch {
+        if (!demoLoaded) {
+          try {
+            const res = await api.get('/mail/demo');
+            setFolders(res.data.folders);
+            const folderMsgs = res.data.messages?.messages || [];
+            setMessages(folderMsgs, folderMsgs.length, 1, 1);
+          } catch {}
+        }
         skipImapRef.current = true;
-        try {
-          const res = await api.get('/mail/demo');
-          setFolders(res.data.folders);
-          setError(null);
-          const folderMsgs = res.data.messages?.messages || [];
-          // 按当前文件夹筛选
-          const folder = currentFolder.toLowerCase();
-          const filtered = folder === 'inbox' ? folderMsgs
-            : folderMsgs.filter((m: any) => {
-                if (folder === 'sent') return m.from_?.email?.includes('demo');
-                if (folder === 'junk' || folder === 'drafts' || folder === 'trash' || folder === 'archive') return false;
-                return true;
-              });
-          setMessages(filtered, filtered.length, 1, 1);
-        } catch { setError('加载失败'); }
-      });
+      }
+    })();
   }, [setFolders, setMessages, setError]);
 
   // ── 切换文件夹/搜索/翻页: 加载邮件 ──
