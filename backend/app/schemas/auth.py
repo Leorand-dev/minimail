@@ -1,5 +1,5 @@
 """
-Webmail — Auth schemas (请求/响应)
+Minimail — Auth schemas (请求/响应)
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ class RegisterRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr = Field(..., description="用户邮箱")
+    email: str = Field(..., description="用户名或邮箱")
     password: str = Field(..., description="密码")
 
 
@@ -66,6 +66,7 @@ class ErrorResponse(BaseModel):
 
 class UpdateProfileRequest(BaseModel):
     name: str = Field("", max_length=128, description="新显示名称")
+    username: Optional[str] = Field(None, max_length=64, description="新用户名")
 
 
 class ChangePasswordRequest(BaseModel):

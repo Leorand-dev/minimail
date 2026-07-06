@@ -5,6 +5,7 @@ Webmail — Auth 路由
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -133,8 +134,16 @@ async def update_profile(
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """更新当前用户的显示名称。"""
+    """更新当前用户的显示名称或用户名。"""
     current_user.name = body.name
+    if body.username is not None:
+        from app.models.user import User
+        existing = await db.execute(
+            select(User).where(User.username == body.username, User.id != current_user.id)
+        )
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="用户名已被使用")
+        current_user.username = body.username
     await db.commit()
     await db.refresh(current_user)
     return UserResponse.model_validate(current_user)

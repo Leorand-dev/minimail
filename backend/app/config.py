@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     debug: bool = True
 
     # ── 数据库 ──
-    database_url: str = "postgresql+asyncpg://minimail:minimail_dev@localhost:5432/minimail"
+    database_url: str = "postgresql+asyncpg://webmail:webmail_dev@localhost:5432/webmail"
     database_echo: bool = False
 
     # ── Redis ──

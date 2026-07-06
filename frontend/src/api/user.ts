@@ -18,8 +18,8 @@ export async function fetchProfile(): Promise<UserProfile> {
   return res.data;
 }
 
-export async function updateProfile(name: string): Promise<UserProfile> {
-  const res = await api.put('/api/auth/profile', { name });
+export async function updateProfile(name: string, username?: string): Promise<UserProfile> {
+  const res = await api.put('/api/auth/profile', { name, username });
   return res.data;
 }
 
