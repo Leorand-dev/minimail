@@ -39,6 +39,12 @@ def upgrade() -> None:
     op.create_index('ix_notes_user_id', 'notes', ['user_id'])
     op.create_index('ix_notes_created_at', 'notes', ['created_at'])
 
+    # 全文搜索 GIN 索引 (tsvector)
+    op.execute(
+        "CREATE INDEX ix_notes_content_tsv ON notes "
+        "USING gin (to_tsvector('simple', coalesce(content, '')))"
+    )
+
     # ### note_tags ###
     op.create_table(
         'note_tags',
@@ -71,4 +77,5 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_table('note_reactions')
     op.drop_table('note_tags')
+    op.execute("DROP INDEX IF EXISTS ix_notes_content_tsv")
     op.drop_table('notes')

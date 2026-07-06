@@ -14,7 +14,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func, Index
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -57,6 +57,15 @@ class Note(Base):
     user = relationship("User", back_populates="notes")
     reactions: Mapped[list["NoteReaction"]] = relationship(
         back_populates="note", cascade="all, delete-orphan"
+    )
+
+    # ── 全文搜索索引 (GIN on tsvector) ──
+    __table_args__ = (
+        Index(
+            "ix_notes_content_tsv",
+            func.to_tsvector("simple", func.coalesce("content", "")),
+            postgresql_using="gin",
+        ),
     )
 
 
