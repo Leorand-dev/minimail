@@ -68,6 +68,28 @@ export default function ApiKeysPanel() {
             管理用于外部应用访问 Minimail API 的鉴权密钥
           </p>
 
+          {/* API 调用地址 */}
+          <div className="mb-6 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
+            <label className="block text-xs font-medium text-gray-500 mb-1">API 调用地址</label>
+            <div className="flex gap-2">
+              <code className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded text-sm font-mono select-all">
+                {window.location.origin}/api
+              </code>
+              <button
+                onClick={() => {
+                  try { navigator.clipboard.writeText(`${window.location.origin}/api`); }
+                  catch { /* ignore */ }
+                }}
+                className="px-3 py-2 text-xs text-gray-500 border border-gray-200 rounded hover:bg-white hover:text-[#066da5]"
+              >
+                复制
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-gray-400">
+              在请求 Header 中添加 <code className="text-xs bg-gray-100 px-1 rounded">Authorization: Bearer &lt;令牌&gt;</code> 即可调用
+            </p>
+          </div>
+
           {/* Error */}
           {error && (
             <div className="mb-4 px-4 py-2 bg-red-50 border border-red-200 rounded text-red-600 text-sm">
