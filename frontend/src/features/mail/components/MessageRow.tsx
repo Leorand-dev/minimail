@@ -5,6 +5,8 @@ import type { MessageSummary } from '@/api/mail';
 interface MessageRowProps {
   message: MessageSummary;
   selected: boolean;
+  checked?: boolean;
+  onToggleCheck?: () => void;
   onSelect: () => void;
 }
 
@@ -63,7 +65,7 @@ function getAvatarLetter(from_: MessageSummary['from_']): string {
   return display.charAt(0).toUpperCase();
 }
 
-export default function MessageRow({ message, selected, onSelect }: MessageRowProps) {
+export default function MessageRow({ message, selected, checked, onToggleCheck, onSelect }: MessageRowProps) {
   const flags = message.flags || [];
   const isFlagged = flags.includes('\\Flagged');
   const searchQuery = useMailStore((s) => s.searchQuery);
@@ -80,6 +82,16 @@ export default function MessageRow({ message, selected, onSelect }: MessageRowPr
           : 'bg-white font-semibold hover:bg-[#edf3ff] hover:border-l-2 hover:border-l-transparent'
       }`}
     >
+      {/* Checkbox */}
+      <div className="w-9 flex-shrink-0 flex items-center" onClick={(e) => { e.stopPropagation(); onToggleCheck?.(); }}>
+        <input
+          type="checkbox"
+          checked={checked || false}
+          onChange={() => onToggleCheck?.()}
+          className="accent-[#066da5]"
+        />
+      </div>
+
       {/* Avatar / Flag icon */}
       <div className="w-8 flex-shrink-0 flex items-center justify-center">
         {isFlagged ? (
