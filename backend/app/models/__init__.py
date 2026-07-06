@@ -7,4 +7,6 @@ from app.models.contact import Contact, ContactGroup
 from app.models.api_token import ApiToken
 from app.models.email_account import EmailAccount
 
-__all__ = ["User", "Contact", "ContactGroup", "ApiToken", "EmailAccount"]
+from app.models.note import Note, NoteTag, NoteReaction
+
+__all__ = ["User", "Contact", "ContactGroup", "ApiToken", "EmailAccount", "Note", "NoteTag", "NoteReaction"]
