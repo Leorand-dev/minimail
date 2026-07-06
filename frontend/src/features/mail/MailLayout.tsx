@@ -31,6 +31,7 @@ export default function MailLayout() {
     setFolders, setMessages, setLoading, setError } = useMailStore();
 
   const initRef = useRef(false);
+  const demoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (initRef.current) return;
@@ -59,31 +60,49 @@ export default function MailLayout() {
   const loadMessages = useCallback(async () => {
     setLoading(true);
     setError(null);
+
+    // 1. 先快速尝试 demo 端点 (本地, 毫秒级)
+    let loadedFromDemo = false;
     try {
-      const res = searchQuery.trim()
-        ? await searchApi(searchQuery, currentFolder, page, 50, {
-            date_from: searchDateFrom || undefined,
-            date_to: searchDateTo || undefined,
-            unread_only: searchUnreadOnly || undefined,
-          })
-        : await fetchMessages(currentFolder, page, 50);
-      setMessages(res.messages, res.total, res.page, res.total_pages);
+      const demoRes = await api.get('/mail/demo');
+      const folderMsgs = (demoRes.data.messages?.messages || []);
+      const folder = currentFolder.toLowerCase();
+      const filtered = folder === 'inbox' ? folderMsgs
+        : folderMsgs.filter((m: any) => {
+            if (folder === 'sent') return m.from_?.email?.includes('demo');
+            if (folder === 'junk' || folder === 'drafts' || folder === 'trash' || folder === 'archive') return false;
+            return true;
+          });
+      setMessages(filtered, filtered.length, 1, 1);
+      loadedFromDemo = true;
+    } catch { /* demo 不可用, 继续尝试 IMAP */ }
+
+    // 2. 再尝试真实 IMAP (可能超时, 但 demo 已展示)
+    try {
+      if (!demoTimerRef.current) {
+        const imapPromise = searchQuery.trim()
+          ? searchApi(searchQuery, currentFolder, page, 50, {
+              date_from: searchDateFrom || undefined,
+              date_to: searchDateTo || undefined,
+              unread_only: searchUnreadOnly || undefined,
+            })
+          : fetchMessages(currentFolder, page, 50);
+        // 快速超时: 3 秒内 IMAP 无响应就放弃
+        const timeout = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('IMAP timeout')), 3000)
+        );
+        const res = await Promise.race([imapPromise, timeout]);
+        setMessages(res.messages, res.total, res.page, res.total_pages);
+      }
     } catch {
-      // IMAP 失败 — 尝试从 demo 端点获取消息
-      try {
-        const demoRes = await api.get('/mail/demo');
-        const folderMsgs = (demoRes.data.messages?.messages || []);
-        const folder = currentFolder.toLowerCase();
-        const filtered = folder === 'inbox' ? folderMsgs
-          : folderMsgs.filter((m: any) => {
-              if (folder === 'sent') return m.from_?.email?.includes('demo');
-              if (folder === 'junk') return false;
-              if (folder === 'drafts' || folder === 'trash' || folder === 'archive') return false;
-              return true;
-            });
-        setMessages(filtered, filtered.length, 1, 1);
-      } catch {
-        setError('加载邮件失败');
+      // IMAP 超时或失败 — demo 数据已展示, 不报错
+      if (!loadedFromDemo) {
+        // demo 也没加载到, 尝试最后一次
+        try {
+          const demoRes = await api.get('/mail/demo');
+          const folderMsgs = (demoRes.data.messages?.messages || []);
+          setMessages(folderMsgs, folderMsgs.length, 1, 1);
+        } catch { setError('加载邮件失败'); }
       }
     }
     finally { setLoading(false); }

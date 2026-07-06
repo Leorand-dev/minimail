@@ -52,26 +52,34 @@ export default function MessageList({ className = '', onSelectMessage }: Message
     setSelectedUid(msg.uid);
     setPreviewMessage(null);
     onSelectMessage?.();
+    // 先尝试快速 demo 详情 (本地, 毫秒级)
+    let detailLoaded = false;
+    try {
+      const res = await api.get('/mail/demo');
+      const details = res.data.details || {};
+      const detail = details[msg.uid];
+      if (detail) {
+        setPreviewMessage(detail);
+        detailLoaded = true;
+        // 标记本地消息为已读
+        if (!msg.is_read) {
+          const currentMsgs = useMailStore.getState().messages;
+          const updated = currentMsgs.map((m) =>
+            m.uid === msg.uid ? { ...m, is_read: true, flags: [...(m.flags || []), '\Seen'] } : m
+          );
+          useMailStore.getState().setMessages(updated, useMailStore.getState().totalMessages, useMailStore.getState().page, useMailStore.getState().totalPages);
+        }
+      }
+    } catch {}
+
+    if (detailLoaded) return;
+
+    // demo 没有详情(或失败), 尝试 IMAP
     try {
       const detail = await fetchMessageDetail(currentFolder, msg.uid);
       setPreviewMessage(detail);
     } catch (err) {
-      // IMAP 失败 — 尝试获取 demo 详情
-      try {
-        const res = await api.get('/mail/demo');
-        const details = res.data.details || {};
-        const detail = details[msg.uid];
-        if (detail) {
-          setPreviewMessage(detail);
-          // 标记本地消息为已读
-          if (!msg.is_read) {
-            const updated = useMailStore.getState().messages.map((m) =>
-              m.uid === msg.uid ? { ...m, is_read: true, flags: [...(m.flags || []), '\Seen'] } : m
-            );
-            useMailStore.getState().setMessages(updated, useMailStore.getState().totalMessages, useMailStore.getState().page, useMailStore.getState().totalPages);
-          }
-        }
-      } catch {}
+      console.warn('加载邮件详情失败:', err);
     }
   };
 
