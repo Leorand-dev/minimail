@@ -4,122 +4,72 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/Python-3.11+-blue)
-![React](https://img.shields.io/badge/React-18-61dafb)
+![React](https://img.shields.io/badge/React-19-61dafb)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791)
 
 ---
 
-## 特性
+## 简介
 
-### 邮件核心
-- **多协议支持** — IMAP 收件 + SMTP 发件，兼容 Gmail、Outlook、QQ 邮箱、自建 Dovecot
-- **MIME 完整解析** — HTML/纯文本/附件/内嵌图片，多种编码格式
-- **全功能操作** — 文件夹管理、邮件标记、批量操作、会话线程、拖拽排序
-- **高性能** — Redis 缓存 + 虚拟列表，10 万+ 邮箱流畅浏览
-
-### AI Agent 集成
-- **MCP 协议** — 标准 Model Context Protocol，任何 MCP 兼容 Agent 可直接操作邮件
-- **OpenAI Function Calling** — 与 GPT-4 / Claude / DeepSeek 等无缝对接
-- **语义搜索** — pgvector 向量化搜索，自然语言查找邮件（"上个月预算审批的邮件"）
-- **事件驱动** — IMAP IDLE → 事件总线 → Webhook / SSE，Agent 实时响应
-- **自动工作流** — 紧急回复、每日摘要、行程提取、垃圾学习等预置场景
-- **对话式操作** — 与 AI 对话完成所有邮件操作，无需手动点击
-
-### 系统能力
-- **插件系统** — Hook 事件机制，可扩展 30+ 插件
-- **国际化** — 70+ 语言，RTL 支持
-- **安全** — PGP 加密、XSS 过滤、图片代理、Agent 审计日志、细粒度权限
-- **Docker 一键部署** — FastAPI + React SPA + PostgreSQL + Redis
+Webmail 是一个具备完整邮件能力的 Web 邮件客户端，支持 IMAP 收件、SMTP 发件、通讯录管理、API 授权管理等功能。所有功能在单一页面内完成，左侧功能导航、右侧内容区动态切换。
 
 ---
 
-## 架构概览
+## 功能
 
-```
-                    ┌─────────────────────┐
-                    │   React SPA (前端)   │
-                    │  Mail / Compose /    │
-                    │  Contacts / Chat     │
-                    └──────────┬──────────┘
-                               │ REST API
-                    ┌──────────▼──────────┐
-                    │  FastAPI Backend     │
-                    │  ┌─────────────────┐ │
-                    │  │   Agent Gateway  │ │  ← MCP / OpenAI Tool
-                    │  │  Webhook / SSE   │ │  ← 事件驱动
-                    │  └─────────────────┘ │
-                    │  ┌─────────────────┐ │
-                    │  │   IMAP / SMTP   │ │  ← 邮件协议
-                    │  │   MIME 解析     │ │
-                    │  │   插件引擎      │ │
-                    │  └─────────────────┘ │
-                    │  ┌─────────────────┐ │
-                    │  │  AI 服务        │ │  ← 分类/总结/语义搜索
-                    │  └─────────────────┘ │
-                    └──────────┬──────────┘
-                               │
-          ┌────────────────────┼────────────────────┐
-          ▼                    ▼                    ▼
-    ┌──────────┐       ┌──────────┐        ┌────────────┐
-    │PostgreSQL│       │  Redis   │        │  IMAP 服务器 │
-    │+pgvector │       │缓存/会话 │        │ (Gmail/自建) │
-    └──────────┘       └──────────┘        └────────────┘
-```
+| 功能 | 说明 |
+|------|------|
+| 📥 **收件箱** | IMAP 三栏布局、文件夹树、邮件列表、预览面板、搜索、分页 |
+| ✏️ **写邮件** | 富文本编辑、收件人自动完成 (通讯录联动)、附件 |
+| ⚙️ **设置** | IMAP / SMTP 配置、密码加密存储、连接测试 |
+| 👤 **通讯录** | 联系人 CRUD、分组管理、搜索、自动完成 |
+| 🔑 **API 密钥** | 令牌创建/撤销/过期管理、一次性展示、范围控制 |
+| 🚪 **登录/注册** | JWT 双令牌、自动续期、持久登录 |
 
 ---
 
 ## 快速开始
+
+### 前置条件
+
+- Python 3.11+
+- Node.js 20+
+- Docker (PostgreSQL + Redis)
+- IMAP / SMTP 邮箱账号
 
 ```bash
 # 克隆
 git clone https://github.com/Leorand-dev/webmail.git
 cd webmail
 
-# 启动开发环境
-docker compose -f docker/docker-compose.yml up -d
+# 启动数据库
+docker compose -f docker/docker-compose.yml up -d postgres redis
 
-# 访问
-open http://localhost:3000
+# 后端
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# 前端
+cd ../frontend
+npm install
+npx vite --host 0.0.0.0 --port 5173
 ```
 
-> 详细部署指南见 [docs/INSTALL.md](docs/INSTALL.md)
+访问 **http://localhost:5173** → 注册账号 → 在设置中配置 IMAP/SMTP 后即可收发邮件。
 
 ---
 
-## 项目结构
+## 本地开发
 
+```bash
+make dev           # 一键启动前后端 + 数据库
+make dev-backend   # 仅后端
+make dev-frontend  # 仅前端
+make migrate       # 数据库迁移
 ```
-webmail/
-├── backend/                    # FastAPI 后端
-│   └── app/
-│       ├── api/                # 路由层
-│       ├── services/           # 业务逻辑
-│       ├── agent/              # AI Agent 集成
-│       ├── models/             # 数据模型
-│       └── plugins/            # 插件系统
-├── frontend/                   # React 前端
-│   └── src/
-│       ├── features/           # 功能模块
-│       └── components/         # 公共组件
-├── docker/                     # Docker Compose
-├── docs/                       # 文档
-└── DEVELOPMENT_PLAN.md         # 完整开发计划
-```
-
----
-
-## 开发路线
-
-| 阶段 | 周期 | 产出 |
-|------|------|------|
-| Phase 0 | Week 1 | 项目基建 / Docker / CI |
-| Phase 1-3 | Week 2-5 | 核心邮件功能 (认证/IMAP/浏览/发送) |
-| Phase 4-5 | Week 6-7 | 通讯录 / 设置 / 国际化 |
-| Phase 6-7 | Week 8-11 | 高级功能 / 插件系统 |
-| Phase 8 | Week 12 | 部署 / 运维就绪 |
-| Phase 9 | Week 13-16 | **AI Agent 集成** |
-
-完整开发计划见 [`DEVELOPMENT_PLAN.md`](DEVELOPMENT_PLAN.md)
 
 ---
 
@@ -127,16 +77,45 @@ webmail/
 
 | 层 | 选型 |
 |------|------|
-| 后端框架 | FastAPI (Python 3.11+) |
-| ORM | SQLAlchemy 2.0 + Alembic |
-| 数据库 | PostgreSQL 16 + pgvector |
-| 缓存 | Redis 7 |
-| 前端 | React 18 + TypeScript + Vite |
-| UI | shadcn/ui + Tailwind CSS 4 |
-| IMAP | aiosmtplib + imaplib (async) |
-| SMTP | aiosmtplib |
-| Agent 协议 | MCP + OpenAI Function Calling |
+| 后端框架 | FastAPI (Python 3.11+, async) |
+| ORM | SQLAlchemy 2.0 (async) + Alembic |
+| 数据库 | PostgreSQL 16 |
+| 缓存 | Redis 7 (可选) |
+| API 认证 | JWT (双令牌: access + refresh) |
+| 前端 | React 19 + TypeScript 5 + Vite 6 |
+| 样式 | Tailwind CSS 4 |
+| 状态管理 | Zustand |
+| 邮件协议 | aioimaplib (IMAP), aiosmtplib (SMTP) |
+| 密码加密 | Fernet (symmetric) |
 | 部署 | Docker Compose |
+
+---
+
+## 项目结构
+
+```
+webmail/
+├── backend/                    # FastAPI 异步后端
+│   └── app/
+│       ├── api/                # REST 路由 (auth/settings/mail/contacts/tokens)
+│       ├── services/           # 业务逻辑 (IMAP/SMTP/联系人/令牌)
+│       ├── models/             # SQLAlchemy ORM 模型
+│       ├── schemas/            # Pydantic 通信模型
+│       ├── imap/               # IMAP 协议层 (连接池/解析/搜索)
+│       ├── database.py         # 数据库引擎 & 自动建表
+│       └── main.py             # 应用入口
+├── frontend/                   # React SPA
+│   └── src/
+│       ├── features/           # 功能模块 (mail/compose/settings/contacts/api-keys/auth)
+│       ├── stores/             # Zustand 状态管理
+│       ├── api/                # API 客户端 (含自动刷新 token)
+│       ├── components/         # 通用组件
+│       └── App.tsx             # 路由配置
+├── docker/                     # Docker Compose
+├── docs/                       # 文档
+├── DEVELOPMENT_PLAN.md         # 完整开发计划
+└── DEVELOPMENT_ROADMAP.md      # 开发路线图
+```
 
 ---
 
