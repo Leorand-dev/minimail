@@ -61,23 +61,6 @@ export default function ApiKeysPanel() {
 
   return (
     <div className="flex flex-1 flex-col min-w-0">
-      {/* Toolbar header */}
-      <header className="flex items-center gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50">
-        <button
-          onClick={() => setActiveView('mail')}
-          className="text-sm text-[#066da5] hover:underline"
-        >
-          ← 返回邮箱
-        </button>
-        <span className="flex-1 text-sm font-semibold text-gray-700">🔑 API 授权管理</span>
-        <button
-          onClick={() => { setShowCreate(true); setCreatedToken(null); }}
-          className="px-3 py-1 text-sm text-white bg-[#066da5] rounded hover:bg-[#05588a]"
-        >
-          + 新建密钥
-        </button>
-      </header>
-
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-3xl mx-auto">
           {/* Sub-header description */}

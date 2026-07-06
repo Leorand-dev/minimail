@@ -91,11 +91,6 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="flex items-center gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50">
-        <button onClick={() => onBack ? onBack() : navigate('/mail')} className="text-sm text-[#066da5] hover:underline">← 返回邮箱</button>
-        <span className="flex-1 text-sm font-semibold text-gray-700">邮件账户设置</span>
-      </header>
-
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-2xl mx-auto">
 

@@ -9,12 +9,9 @@ interface ContactsPageProps {
 
 export default function ContactsPage({ onBack }: ContactsPageProps) {
   const navigate = useNavigate();
-
-  // Search with 300ms debounce
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
-
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [groups, setGroups] = useState<ContactGroup[]>([]);
   const [page, setPage] = useState(1);
@@ -22,8 +19,6 @@ export default function ContactsPage({ onBack }: ContactsPageProps) {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-
-  // Form state
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Contact | null>(null);
   const [form, setForm] = useState({
@@ -32,16 +27,12 @@ export default function ContactsPage({ onBack }: ContactsPageProps) {
   });
 
   const load = useCallback(async (p = 1) => {
-    setLoading(true);
-    setError('');
+    setLoading(true); setError('');
     try {
       const [cRes, gRes] = await Promise.all([
-        fetchContacts({ search, page: p, page_size: 50 }),
-        fetchGroups(),
+        fetchContacts({ search, page: p, page_size: 50 }), fetchGroups(),
       ]);
-      setContacts(cRes.contacts);
-      setTotal(cRes.total);
-      setTotalPages(cRes.total_pages);
+      setContacts(cRes.contacts); setTotal(cRes.total); setTotalPages(cRes.total_pages);
       if (gRes.length) setGroups(gRes);
     } catch { setError('加载失败'); }
     finally { setLoading(false); }
@@ -52,26 +43,16 @@ export default function ContactsPage({ onBack }: ContactsPageProps) {
   const handleSearchChange = (val: string) => {
     setSearchInput(val);
     if (searchTimer.current) clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => {
-      setSearch(val);
-      setPage(1);
-    }, 300);
+    searchTimer.current = setTimeout(() => { setSearch(val); setPage(1); }, 300);
   };
 
   const handleSave = async () => {
-    if (!form.display_name.trim() && !form.email.trim()) {
-      setError('请输入姓名或邮箱');
-      return;
-    }
+    if (!form.display_name.trim() && !form.email.trim()) { setError('请输入姓名或邮箱'); return; }
     setError('');
     try {
-      if (editing) {
-        await updateContact(editing.id, form);
-      } else {
-        await createContact(form);
-      }
-      setShowForm(false);
-      setEditing(null);
+      if (editing) { await updateContact(editing.id, form); }
+      else { await createContact(form); }
+      setShowForm(false); setEditing(null);
       setForm({ display_name: '', email: '', phone: '', phone_mobile: '', organization: '', notes: '', group_id: '' });
       load(page);
     } catch { setError('保存失败'); }
@@ -79,39 +60,20 @@ export default function ContactsPage({ onBack }: ContactsPageProps) {
 
   const handleDelete = async (id: string) => {
     if (!confirm('确定删除此联系人？')) return;
-    try {
-      await deleteContact(id);
-      load(page);
-    } catch { setError('删除失败'); }
+    try { await deleteContact(id); load(page); } catch { setError('删除失败'); }
   };
 
   return (
     <div className="flex flex-1 flex-col bg-white">
-      {/* Toolbar */}
-      <header className="flex items-center gap-2 px-3 py-2 border-b border-gray-200">
-        <button onClick={() => onBack ? onBack() : navigate('/mail')} className="text-sm text-[#066da5] hover:underline">← 返回邮箱</button>
-        <span className="flex-1 text-sm font-semibold text-gray-700">通讯录</span>
-        <button
-          onClick={() => { setEditing(null); setForm({ display_name: '', email: '', phone: '', phone_mobile: '', organization: '', notes: '', group_id: '' }); setShowForm(true); }}
-          className="px-3 py-1 text-sm text-white bg-[#066da5] rounded hover:bg-[#05588a]"
-        >+ 新建</button>
-      </header>
-
       {/* Search */}
       <div className="px-3 py-2 border-b border-gray-200">
-        <input
-          type="text"
-          value={searchInput}
-          onChange={(e) => handleSearchChange(e.target.value)}
+        <input type="text" value={searchInput} onChange={(e) => handleSearchChange(e.target.value)}
           placeholder="搜索联系人..."
-          className="w-full max-w-sm px-3 py-1.5 text-sm border border-gray-300 rounded-full bg-gray-50 focus:bg-white focus:border-[#066da5] focus:outline-none"
-        />
+          className="w-full max-w-sm px-3 py-1.5 text-sm border border-gray-300 rounded-full bg-gray-50 focus:bg-white focus:border-[#066da5] focus:outline-none" />
       </div>
 
       {/* Error */}
-      {error && (
-        <div className="px-4 py-2 bg-red-50 border-b border-red-200 text-red-600 text-sm">{error}</div>
-      )}
+      {error && <div className="px-4 py-2 bg-red-50 border-b border-red-200 text-red-600 text-sm">{error}</div>}
 
       {/* Form dialog */}
       {showForm && (
@@ -155,18 +117,11 @@ export default function ContactsPage({ onBack }: ContactsPageProps) {
                   <div className="text-xs text-gray-400 truncate">{c.email}{c.organization ? ` · ${c.organization}` : ''}</div>
                 </div>
                 <div className="flex gap-1 ml-2">
-                  <button
-                    onClick={() => { setEditing(c); setForm({ display_name: c.display_name, email: c.email, phone: c.phone || '', phone_mobile: c.phone_mobile || '', organization: c.organization || '', notes: c.notes || '', group_id: c.group_id || '' }); setShowForm(true); }}
-                    className="px-2 py-0.5 text-xs text-[#066da5] hover:bg-blue-50 rounded"
-                  >编辑</button>
-                  <button
-                    onClick={() => handleDelete(c.id)}
-                    className="px-2 py-0.5 text-xs text-red-500 hover:bg-red-50 rounded"
-                  >删除</button>
+                  <button onClick={() => { setEditing(c); setForm({ display_name: c.display_name, email: c.email, phone: c.phone || '', phone_mobile: c.phone_mobile || '', organization: c.organization || '', notes: c.notes || '', group_id: c.group_id || '' }); setShowForm(true); }} className="px-2 py-0.5 text-xs text-[#066da5] hover:bg-blue-50 rounded">编辑</button>
+                  <button onClick={() => handleDelete(c.id)} className="px-2 py-0.5 text-xs text-red-500 hover:bg-red-50 rounded">删除</button>
                 </div>
               </div>
             ))}
-            {/* Pagination */}
             {totalPages > 1 && (
               <div className="flex justify-center items-center gap-2 py-3">
                 <button disabled={page <= 1} onClick={() => setPage(page - 1)} className="px-2 py-1 text-xs text-gray-500 border rounded disabled:opacity-30">上一页</button>

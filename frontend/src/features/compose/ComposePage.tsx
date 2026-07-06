@@ -86,7 +86,7 @@ export default function ComposePage({ onBack }: ComposePageProps) {
   return (
     <div className="bg-white flex-1 flex flex-col min-w-0">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white">
         <div className="flex items-center gap-3">
           <button
             onClick={() => onBack ? onBack() : navigate('/mail')}
