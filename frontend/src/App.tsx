@@ -3,6 +3,8 @@ import { useAuthStore } from '@/stores/auth';
 import LoginPage from '@/features/auth/LoginPage';
 import RegisterPage from '@/features/auth/RegisterPage';
 import MailLayout from '@/features/mail/MailLayout';
+import ComposePage from '@/features/compose/ComposePage';
+import SettingsPage from '@/features/settings/SettingsPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -16,6 +18,8 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/compose" element={<ProtectedRoute><ComposePage /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
         <Route
           path="/mail/*"
           element={

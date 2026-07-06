@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import close_db, init_db
 from app.api import auth, health, mail
+from app.api import settings as settings_router
 
 
 @asynccontextmanager
@@ -44,3 +45,4 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api", tags=["health"])
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(mail.router, tags=["mail"])
+app.include_router(settings_router.router, tags=["settings"])

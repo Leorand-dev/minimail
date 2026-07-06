@@ -11,6 +11,7 @@ from sqlalchemy import text
 
 from app.config import settings
 from app.database import async_session_factory
+from app.services.redis_service import ping_redis
 
 router = APIRouter(tags=["health"])
 
@@ -42,6 +43,9 @@ async def health_db():
 
 @router.get("/health/redis")
 async def health_redis():
-    """Redis 连接检查 (占位, 待 Redis 集成后完善)."""
-    # TODO: 接入 Redis 后实现真实检查
-    return {"status": "ok", "redis": "not_configured"}
+    """Redis 连接检查."""
+    try:
+        ok = await ping_redis()
+        return {"status": "ok" if ok else "error", "redis": "connected" if ok else "unreachable"}
+    except Exception as e:
+        return {"status": "error", "redis": "unreachable", "detail": str(e)}

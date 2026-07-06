@@ -166,6 +166,11 @@ async def get_current_user(
     db: AsyncSession = Depends(get_db),
 ) -> User:
     """FastAPI 依赖注入: 从 JWT 获取当前用户."""
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="缺少认证令牌",
+        )
     payload = decode_token(token)
     if not payload or payload.get("type") != "access":
         raise HTTPException(

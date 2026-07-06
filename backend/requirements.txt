@@ -12,7 +12,8 @@ python-jose[cryptography]>=3.3
 passlib[bcrypt]>=1.7
 bcrypt<4.1  # passlib 兼容性
 aioimaplib>=1.1
-python-multipart>=0.0.18
+aiosmtplib>=3.0.2
+python-multipart>=0.0.9
 httpx>=0.28
 # AI / Agent
 openai>=1.55

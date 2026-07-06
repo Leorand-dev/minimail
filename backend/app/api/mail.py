@@ -8,6 +8,7 @@ import uuid
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -29,7 +30,7 @@ from app.imap.connection import get_connection
 from app.imap.types import Folder, MessageDetail, MessageSummary
 from app.models.user import User
 from app.services.auth import get_current_user
-from app.models.user import User
+
 router = APIRouter(prefix="/api/mail", tags=["mail"])
 
 
@@ -255,3 +256,50 @@ async def delete(
     )
     ok = await delete_message(imap, folder, uid)
     return {"status": "ok" if ok else "failed"}
+
+
+# ══════════════════════════════════════════
+# 发送邮件
+# ══════════════════════════════════════════
+
+
+class SendRequest(BaseModel):
+    to: list[str]
+    cc: list[str] | None = None
+    bcc: list[str] | None = None
+    subject: str = ""
+    text_body: str = ""
+    html_body: str = ""
+    reply_to: str | None = None
+    in_reply_to: str | None = None
+    from_addr: str | None = None
+
+
+@router.post("/send", status_code=status.HTTP_200_OK)
+async def send_mail(
+    body: SendRequest,
+    user: User = Depends(get_current_user),
+    _db: AsyncSession = Depends(get_db),
+):
+    """发送邮件 (通过用户 SMTP 配置)."""
+    from app.services.smtp_service import send_email
+
+    if not body.to:
+        raise HTTPException(status_code=400, detail="收件人不能为空")
+
+    try:
+        result = await send_email(
+            user=user,
+            from_addr=body.from_addr or user.email,
+            to_addrs=body.to,
+            subject=body.subject,
+            text_body=body.text_body,
+            html_body=body.html_body,
+            cc=body.cc,
+            bcc=body.bcc,
+            reply_to=body.reply_to,
+            in_reply_to=body.in_reply_to,
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
