@@ -64,7 +64,18 @@ export default function MailLayout() {
   // ── 切换文件夹/搜索/翻页: 加载邮件 ──
   // 跳过 mount 时的首次执行 (init 已处理)
   const mountedRef = useRef(false);
+  const lastKeyRef = useRef('');
+
   const loadMessages = useCallback(async () => {
+    const store = useMailStore.getState();
+    const cacheKey = `${store.currentAccount || '__unified__'}|${store.currentFolder}|${store.searchQuery}|${store.page}`;
+    
+    // 如果已有数据且 cache 未变, 跳过加载
+    if (lastKeyRef.current === cacheKey && store.messages.length > 0 && !store.loading) {
+      return;
+    }
+    lastKeyRef.current = cacheKey;
+
     setLoading(true);
     setError(null);
 
@@ -116,6 +127,16 @@ export default function MailLayout() {
     }
     if (activeView === 'mail') loadMessages();
   }, [loadMessages, activeView]);
+
+  // 监听侧栏刷新事件
+  useEffect(() => {
+    const handler = () => {
+      lastKeyRef.current = ''; // 重置缓存, 强制刷新
+      if (activeView === 'mail') loadMessages();
+    };
+    window.addEventListener('sidebar-refresh', handler);
+    return () => window.removeEventListener('sidebar-refresh', handler);
+  }, [activeView, loadMessages]);
 
   const cfg = VIEW_CONFIG[activeView] || VIEW_CONFIG.mail;
 
