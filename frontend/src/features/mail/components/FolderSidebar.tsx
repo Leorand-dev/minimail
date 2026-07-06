@@ -153,8 +153,6 @@ export default function FolderSidebar({ className = '', onSelectFolder }: Folder
     }
   }, [flatFolders]);
 
-  const isUnifiedSelected = currentAccount === null && currentFolder === 'INBOX';
-
   return (
     <aside className={`w-56 bg-[#f5f6f7] border-r border-gray-200 flex flex-col ${className}`}>
       {/* ═══ 顶部: 写邮件按钮 ═══ */}
