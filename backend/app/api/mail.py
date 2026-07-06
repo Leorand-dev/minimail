@@ -8,6 +8,7 @@ import uuid
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,6 +18,7 @@ from app.imap import (
     fetch_messages as imap_fetch_messages,
     fetch_message_detail as imap_fetch_detail,
     search_messages as imap_search,
+    fetch_attachment as imap_fetch_attachment,
     mark_as_read,
     mark_as_unread,
     move_message,
@@ -256,6 +258,42 @@ async def delete(
     )
     ok = await delete_message(imap, folder, uid)
     return {"status": "ok" if ok else "failed"}
+
+
+# ══════════════════════════════════════════
+# 附件下载
+# ══════════════════════════════════════════
+
+
+@router.get("/messages/{uid}/attachment/{part_id}")
+async def download_attachment(
+    folder: str = Query("INBOX"),
+    uid: int = Path(..., ge=1),
+    part_id: str = Path(...),
+    user: User = Depends(get_current_user),
+    _db: AsyncSession = Depends(get_db),
+):
+    """下载邮件附件."""
+    cfg = await _get_user_imap_config(user)
+    imap = await get_connection(
+        user.id, cfg["host"], cfg["port"], cfg["ssl"], cfg["username"], cfg["password"]
+    )
+    raw = await imap_fetch_attachment(imap, folder, uid, part_id)
+    if not raw:
+        raise HTTPException(status_code=404, detail="附件未找到")
+
+    import mimetypes
+    mt, _ = mimetypes.guess_type(part_id)
+    media_type = mt or "application/octet-stream"
+
+    return Response(
+        content=raw,
+        media_type=media_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{part_id}"',
+            "Content-Length": str(len(raw)),
+        },
+    )
 
 
 # ══════════════════════════════════════════

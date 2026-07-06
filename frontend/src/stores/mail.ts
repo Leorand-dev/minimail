@@ -5,33 +5,32 @@ export type Pane = 'folders' | 'list' | 'preview';
 /** 邮件页主视图: mail=收件箱, compose=撰写, settings=设置, contacts=通讯录, apikeys=API密钥 */
 export type MailView = 'mail' | 'compose' | 'settings' | 'contacts' | 'apikeys';
 
+/** 撰写页预填充数据 (回复/转发) */
+export interface ComposePrefill {
+  mode: 'reply' | 'reply_all' | 'forward';
+  to: string;
+  cc?: string;
+  subject: string;
+  body: string;
+  from_addr?: string;
+  in_reply_to?: string;
+}
+
 interface MailState {
-  /** 当前邮箱文件夹 */
   folders: Folder[];
-  /** 选中的文件夹名 */
   currentFolder: string;
-  /** 当前邮件列表 */
   messages: MessageSummary[];
-  /** 邮件总数 */
   totalMessages: number;
-  /** 当前页码 */
   page: number;
-  /** 总页数 */
   totalPages: number;
-  /** 选中的邮件 UID */
   selectedUid: number | null;
-  /** 预览中的邮件详情 */
   previewMessage: MessageDetail | null;
-  /** 搜索关键词 */
   searchQuery: string;
-  /** 加载状态 */
   loading: boolean;
-  /** 当前可见面板 (适配响应式) */
   activePane: Pane;
-  /** 错误信息 */
   error: string | null;
-  /** 当前主视图 */
   activeView: MailView;
+  composePrefill: ComposePrefill | null;
 
   setFolders: (folders: Folder[]) => void;
   setCurrentFolder: (folder: string) => void;
@@ -44,6 +43,7 @@ interface MailState {
   setError: (error: string | null) => void;
   setPage: (page: number) => void;
   setActiveView: (view: MailView) => void;
+  setComposePrefill: (data: ComposePrefill | null) => void;
 }
 
 export const useMailStore = create<MailState>((set) => ({
@@ -60,6 +60,7 @@ export const useMailStore = create<MailState>((set) => ({
   activePane: 'list',
   error: null,
   activeView: 'mail',
+  composePrefill: null,
 
   setFolders: (folders) => set({ folders, activeView: 'mail' }),
   setCurrentFolder: (folder) => set({ currentFolder: folder, page: 1, selectedUid: null, previewMessage: null }),
@@ -73,4 +74,5 @@ export const useMailStore = create<MailState>((set) => ({
   setError: (error) => set({ error }),
   setPage: (page) => set({ page }),
   setActiveView: (view) => set({ activeView: view }),
+  setComposePrefill: (data) => set({ composePrefill: data }),
 }));

@@ -254,3 +254,41 @@ async def delete_message(imap, folder: str, uid: int, expunge: bool = True) -> b
     except Exception as e:
         logger.error("删除邮件失败 %s:%d: %s", folder, uid, e)
         return False
+
+
+async def fetch_attachment(
+    imap,
+    folder: str,
+    uid: int,
+    part_id: str,
+) -> bytes | None:
+    """获取邮件指定附件的原始字节."""
+    try:
+        await imap.select(folder)
+        # BODY.PEEK[] 用于获取指定 MIME part
+        typ, data = await imap.uid("FETCH", str(uid), f"(BODY.PEEK[{part_id}])")
+        if typ != "OK" or not data:
+            return None
+
+        raw_data = b""
+        for response_data in data:
+            if not isinstance(response_data, tuple):
+                continue
+            pairs = response_data[1] if len(response_data) > 1 else []
+            if not isinstance(pairs, list):
+                if isinstance(pairs, bytes):
+                    raw_data = pairs
+                continue
+            for pair in pairs:
+                if not isinstance(pair, tuple):
+                    if isinstance(pair, bytes) and len(pair) > 0:
+                        raw_data = pair
+                    continue
+                val = pair[1] if len(pair) > 1 else b""
+                if isinstance(val, bytes) and len(val) > 0:
+                    raw_data = val
+
+        return raw_data if raw_data else None
+    except Exception as e:
+        logger.error("获取附件失败 %s:%d part=%s: %s", folder, uid, part_id, e)
+        return None

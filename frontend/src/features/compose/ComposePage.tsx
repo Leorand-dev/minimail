@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useMailStore } from '@/stores/mail';
 import api from '@/api/client';
 import AutocompleteInput from './AutocompleteInput';
 
@@ -21,6 +22,22 @@ export default function ComposePage({ onBack }: ComposePageProps) {
   const [success, setSuccess] = useState('');
 
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const composePrefill = useMailStore((s) => s.composePrefill);
+  const setComposePrefill = useMailStore((s) => s.setComposePrefill);
+
+  useEffect(() => {
+    if (composePrefill) {
+      setTo(composePrefill.to);
+      setCc(composePrefill.cc || '');
+      setBcc('');
+      setSubject(composePrefill.subject);
+      setBody(composePrefill.body);
+      if (composePrefill.from_addr) setFrom(composePrefill.from_addr);
+      // 回复/转发模式需要设置 from_addr
+      // 清空预填充避免重复
+      setComposePrefill(null);
+    }
+  }, [composePrefill, setComposePrefill]);
 
   const handleSend = async () => {
     if (!to.trim()) {

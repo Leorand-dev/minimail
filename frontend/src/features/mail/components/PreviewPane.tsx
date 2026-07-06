@@ -1,5 +1,6 @@
 import React from 'react';
 import { useMailStore } from '@/stores/mail';
+import { getAttachmentUrl } from '@/api/mail';
 
 interface PreviewPaneProps {
   className?: string;
@@ -10,9 +11,19 @@ function formatAddresses(addresses: { name: string; email: string }[]): string {
   return addresses.map((a) => (a.name ? `${a.name} <${a.email}>` : a.email)).join(', ');
 }
 
+function quoteBody(text: string): string {
+  return text
+    .split('\n')
+    .map((l) => `> ${l}`)
+    .join('\n');
+}
+
 export default function PreviewPane({ className = '' }: PreviewPaneProps) {
   const previewMessage = useMailStore((s) => s.previewMessage);
   const loading = useMailStore((s) => s.loading);
+  const currentFolder = useMailStore((s) => s.currentFolder);
+  const setActiveView = useMailStore((s) => s.setActiveView);
+  const setComposePrefill = useMailStore((s) => s.setComposePrefill);
 
   if (!previewMessage && !loading) {
     return (
@@ -40,16 +51,76 @@ export default function PreviewPane({ className = '' }: PreviewPaneProps) {
   const fromAddr = Array.isArray(msg.from_)
     ? formatAddresses(msg.from_)
     : msg.from_.name
-    ? `${msg.from_.name} <${msg.from_.email}>`
-    : msg.from_.email;
+      ? `${msg.from_.name} <${msg.from_.email}>`
+      : msg.from_.email;
+
+  const replyTo = Array.isArray(msg.reply_to) && msg.reply_to.length > 0
+    ? msg.reply_to
+    : (Array.isArray(msg.from_) ? msg.from_ : [msg.from_]);
+
+  const handleAction = (mode: 'reply' | 'reply_all' | 'forward') => {
+    const subject = mode === 'forward'
+      ? `Fwd: ${msg.subject}`
+      : msg.subject.startsWith('Re:')
+        ? msg.subject
+        : `Re: ${msg.subject}`;
+
+    const body = mode === 'forward'
+      ? `\n\n--- 转发邮件 ---\n发件人: ${fromAddr}\n日期: ${new Date(msg.date).toLocaleString('zh-CN')}\n主题: ${msg.subject}\n\n${msg.text_plain || msg.text_html?.replace(/<[^>]+>/g, '') || ''}`
+      : `\n\n${quoteBody(msg.text_plain || msg.text_html?.replace(/<[^>]+>/g, '') || '')}`;
+
+    if (mode === 'forward') {
+      setComposePrefill({
+        mode: 'forward',
+        to: '',
+        subject,
+        body,
+        in_reply_to: msg.message_id || undefined,
+      });
+    } else {
+      const toAddrs = replyTo.map((a: { email: string; name?: string }) => a.email).join(', ');
+      const ccAddrs = mode === 'reply_all'
+        ? msg.cc.filter((a) => a.email).map((a) => a.email).join(', ')
+        : undefined;
+      setComposePrefill({
+        mode,
+        to: toAddrs,
+        cc: ccAddrs,
+        subject,
+        body,
+        in_reply_to: msg.message_id || undefined,
+      });
+    }
+    setActiveView('compose');
+  };
 
   return (
     <div className={`${className} flex flex-col bg-white border-l border-gray-200 min-w-0`}>
       {/* Header */}
       <div className="px-4 py-3 border-b border-gray-200">
-        <h2 className="text-base font-semibold text-gray-900 mb-2 truncate">
-          {msg.subject || '(无主题)'}
-        </h2>
+        <div className="flex items-start justify-between mb-2">
+          <h2 className="text-base font-semibold text-gray-900 truncate flex-1 min-w-0">
+            {msg.subject || '(无主题)'}
+          </h2>
+          {/* Action buttons */}
+          <div className="flex gap-1 ml-3 flex-shrink-0">
+            <button
+              onClick={() => handleAction('reply')}
+              className="px-2.5 py-1 text-xs text-white bg-[#066da5] rounded hover:bg-[#05588a]"
+              title="回复"
+            >↩ 回复</button>
+            <button
+              onClick={() => handleAction('reply_all')}
+              className="px-2.5 py-1 text-xs text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+              title="全部回复"
+            >↪ 全部回复</button>
+            <button
+              onClick={() => handleAction('forward')}
+              className="px-2.5 py-1 text-xs text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+              title="转发"
+            >↗ 转发</button>
+          </div>
+        </div>
 
         <div className="space-y-1 text-xs text-gray-500">
           <div className="flex">
@@ -83,9 +154,11 @@ export default function PreviewPane({ className = '' }: PreviewPaneProps) {
           </p>
           <div className="flex flex-wrap gap-1">
             {msg.attachments.map((att, i) => (
-              <span
+              <a
                 key={i}
-                className="inline-flex items-center gap-1 px-2 py-0.5 bg-white border border-gray-200 rounded text-[11px] text-gray-600"
+                href={getAttachmentUrl(currentFolder, msg.uid, att.part_id)}
+                download={att.filename}
+                className="inline-flex items-center gap-1 px-2 py-0.5 bg-white border border-gray-200 rounded text-[11px] text-gray-600 hover:border-[#066da5] hover:text-[#066da5] cursor-pointer"
               >
                 📄 {att.filename}
                 <span className="text-gray-400">
@@ -93,7 +166,7 @@ export default function PreviewPane({ className = '' }: PreviewPaneProps) {
                     ? `${(att.size / (1024 * 1024)).toFixed(1)}MB`
                     : `${(att.size / 1024).toFixed(0)}KB`})
                 </span>
-              </span>
+              </a>
             ))}
           </div>
         </div>

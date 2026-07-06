@@ -130,3 +130,7 @@ export async function createFolder(name: string): Promise<void> {
 export async function deleteFolder(name: string): Promise<void> {
   await api.delete('/api/mail/folders', { params: { name } });
 }
+
+export function getAttachmentUrl(folder: string, uid: number, partId: string): string {
+  return `/api/mail/messages/${uid}/attachment/${partId}?folder=${encodeURIComponent(folder)}`;
+}
