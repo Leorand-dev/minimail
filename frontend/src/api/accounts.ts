@@ -36,25 +36,25 @@ export interface AccountCreateRequest {
 }
 
 export async function fetchAccounts(): Promise<EmailAccount[]> {
-  const res = await api.get('/api/settings/accounts');
+  const res = await api.get('/settings/accounts');
   return res.data;
 }
 
 export async function createAccount(data: AccountCreateRequest): Promise<EmailAccount> {
-  const res = await api.post('/api/settings/accounts', data);
+  const res = await api.post('/settings/accounts', data);
   return res.data;
 }
 
 export async function updateAccount(id: string, data: Partial<AccountCreateRequest>): Promise<EmailAccount> {
-  const res = await api.put(`/api/settings/accounts/${id}`, data);
+  const res = await api.put(`/settings/accounts/${id}`, data);
   return res.data;
 }
 
 export async function deleteAccount(id: string): Promise<void> {
-  await api.delete(`/api/settings/accounts/${id}`);
+  await api.delete(`/settings/accounts/${id}`);
 }
 
 export async function setDefaultAccount(id: string): Promise<EmailAccount> {
-  const res = await api.post(`/api/settings/accounts/${id}/default`);
+  const res = await api.post(`/settings/accounts/${id}/default`);
   return res.data;
 }

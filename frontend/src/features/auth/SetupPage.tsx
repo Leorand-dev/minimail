@@ -12,7 +12,7 @@ export default function SetupPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    api.get('/api/auth/setup/status')
+    api.get('/auth/setup/status')
       .then((res) => {
         if (res.data.needs_setup) setStep('ready');
         else navigate('/login');
@@ -29,7 +29,7 @@ export default function SetupPage() {
 
     setLoading(true);
     try {
-      await api.post('/api/auth/setup', {
+      await api.post('/auth/setup', {
         email: `${username}@minimail.local`,
         password,
         name: username,

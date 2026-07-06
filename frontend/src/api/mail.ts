@@ -73,7 +73,7 @@ export interface MessagesResponse {
 // ── API 调用 ──
 
 export async function fetchFolders(): Promise<Folder[]> {
-  const res = await api.get('/api/mail/folders');
+  const res = await api.get('/mail/folders');
   return res.data;
 }
 
@@ -84,7 +84,7 @@ export async function fetchMessages(
   sortField: string = 'date',
   sortOrder: string = 'DESC'
 ): Promise<MessagesResponse> {
-  const res = await api.get('/api/mail/messages', {
+  const res = await api.get('/mail/messages', {
     params: { folder, page, page_size: pageSize, sort_field: sortField, sort_order: sortOrder },
   });
   return res.data;
@@ -96,39 +96,39 @@ export async function searchMessages(
   page: number = 1,
   pageSize: number = 50
 ): Promise<MessagesResponse> {
-  const res = await api.get('/api/mail/messages/search', {
+  const res = await api.get('/mail/messages/search', {
     params: { query, folder, page, page_size: pageSize },
   });
   return res.data;
 }
 
 export async function fetchMessageDetail(folder: string, uid: number): Promise<MessageDetail> {
-  const res = await api.get(`/api/mail/messages/${uid}`, { params: { folder } });
+  const res = await api.get(`/mail/messages/${uid}`, { params: { folder } });
   return res.data;
 }
 
 export async function markRead(folder: string, uid: number): Promise<void> {
-  await api.post(`/api/mail/messages/${uid}/read`, null, { params: { folder } });
+  await api.post(`/mail/messages/${uid}/read`, null, { params: { folder } });
 }
 
 export async function markUnread(folder: string, uid: number): Promise<void> {
-  await api.post(`/api/mail/messages/${uid}/unread`, null, { params: { folder } });
+  await api.post(`/mail/messages/${uid}/unread`, null, { params: { folder } });
 }
 
 export async function moveMessage(folder: string, uid: number, target: string): Promise<void> {
-  await api.post(`/api/mail/messages/${uid}/move`, null, { params: { folder, target } });
+  await api.post(`/mail/messages/${uid}/move`, null, { params: { folder, target } });
 }
 
 export async function deleteMessage(folder: string, uid: number): Promise<void> {
-  await api.post(`/api/mail/messages/${uid}/delete`, null, { params: { folder } });
+  await api.post(`/mail/messages/${uid}/delete`, null, { params: { folder } });
 }
 
 export async function createFolder(name: string): Promise<void> {
-  await api.post('/api/mail/folders', null, { params: { name } });
+  await api.post('/mail/folders', null, { params: { name } });
 }
 
 export async function deleteFolder(name: string): Promise<void> {
-  await api.delete('/api/mail/folders', { params: { name } });
+  await api.delete('/mail/folders', { params: { name } });
 }
 
 export function getAttachmentUrl(folder: string, uid: number, partId: string): string {

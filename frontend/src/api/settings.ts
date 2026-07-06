@@ -23,7 +23,7 @@ export interface MailSettings {
 }
 
 export async function fetchMailSettings(): Promise<MailSettings> {
-  const res = await api.get('/api/settings/mail');
+  const res = await api.get('/settings/mail');
   return res.data;
 }
 
@@ -31,11 +31,11 @@ export async function updateMailSettings(
   imap: ImapConfig,
   smtp: SmtpConfig
 ): Promise<MailSettings> {
-  const res = await api.put('/api/settings/mail', { imap, smtp });
+  const res = await api.put('/settings/mail', { imap, smtp });
   return res.data;
 }
 
 export async function testMailConnection(): Promise<{ status: string; message?: string; errors?: string[] }> {
-  const res = await api.post('/api/settings/mail/test');
+  const res = await api.post('/settings/mail/test');
   return res.data;
 }

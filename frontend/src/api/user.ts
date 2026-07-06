@@ -14,15 +14,15 @@ export interface UserProfile {
 }
 
 export async function fetchProfile(): Promise<UserProfile> {
-  const res = await api.get('/api/auth/me');
+  const res = await api.get('/auth/me');
   return res.data;
 }
 
 export async function updateProfile(name: string, username?: string): Promise<UserProfile> {
-  const res = await api.put('/api/auth/profile', { name, username });
+  const res = await api.put('/auth/profile', { name, username });
   return res.data;
 }
 
 export async function changePassword(current_password: string, new_password: string): Promise<void> {
-  await api.put('/api/auth/password', { current_password, new_password });
+  await api.put('/auth/password', { current_password, new_password });
 }

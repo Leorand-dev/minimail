@@ -47,22 +47,22 @@ export interface ContactsResponse {
 // ── 分组 ──
 
 export async function fetchGroups(): Promise<ContactGroup[]> {
-  const res = await api.get('/api/contacts/groups');
+  const res = await api.get('/contacts/groups');
   return res.data;
 }
 
 export async function createGroup(name: string, color?: string): Promise<ContactGroup> {
-  const res = await api.post('/api/contacts/groups', { name, color });
+  const res = await api.post('/contacts/groups', { name, color });
   return res.data;
 }
 
 export async function updateGroup(id: string, data: Partial<ContactGroup>): Promise<ContactGroup> {
-  const res = await api.put(`/api/contacts/groups/${id}`, data);
+  const res = await api.put(`/contacts/groups/${id}`, data);
   return res.data;
 }
 
 export async function deleteGroup(id: string): Promise<void> {
-  await api.delete(`/api/contacts/groups/${id}`);
+  await api.delete(`/contacts/groups/${id}`);
 }
 
 // ── 联系人 ──
@@ -74,35 +74,35 @@ export async function fetchContacts(params: {
   page_size?: number;
   favorites_only?: boolean;
 } = {}): Promise<ContactsResponse> {
-  const res = await api.get('/api/contacts', { params });
+  const res = await api.get('/contacts', { params });
   return res.data;
 }
 
 export async function fetchContact(id: string): Promise<Contact> {
-  const res = await api.get(`/api/contacts/${id}`);
+  const res = await api.get(`/contacts/${id}`);
   return res.data;
 }
 
 export async function createContact(data: Partial<Contact>): Promise<Contact> {
-  const res = await api.post('/api/contacts', data);
+  const res = await api.post('/contacts', data);
   return res.data;
 }
 
 export async function updateContact(id: string, data: Partial<Contact>): Promise<Contact> {
-  const res = await api.put(`/api/contacts/${id}`, data);
+  const res = await api.put(`/contacts/${id}`, data);
   return res.data;
 }
 
 export async function deleteContact(id: string): Promise<void> {
-  await api.delete(`/api/contacts/${id}`);
+  await api.delete(`/contacts/${id}`);
 }
 
 export async function batchDeleteContacts(ids: string[]): Promise<{ deleted: number }> {
-  const res = await api.post('/api/contacts/batch-delete', ids);
+  const res = await api.post('/contacts/batch-delete', ids);
   return res.data;
 }
 
 export async function autocompleteContacts(query: string, limit = 10): Promise<Contact[]> {
-  const res = await api.get('/api/contacts/autocomplete', { params: { query, limit } });
+  const res = await api.get('/contacts/autocomplete', { params: { query, limit } });
   return res.data;
 }

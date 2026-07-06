@@ -79,7 +79,7 @@ export default function ComposePage({ onBack }: ComposePageProps) {
       };
       if (from.trim()) payload.from_addr = from.trim();
 
-      const res = await api.post('/api/mail/send', payload);
+      const res = await api.post('/mail/send', payload);
 
       setSuccess(`✅ 发送成功`);
       setTimeout(() => onBack ? onBack() : navigate('/mail'), 2000);
