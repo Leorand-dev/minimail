@@ -13,7 +13,7 @@ from app.config import settings
 from app.database import close_db, init_db
 from app.api import auth, health, mail
 from app.api import settings as settings_router
-from app.api import contacts, api_tokens, email_accounts, memos
+from app.api import contacts, api_tokens, email_accounts, memos, system_docs
 
 
 @asynccontextmanager
@@ -51,3 +51,4 @@ app.include_router(contacts.router, tags=["contacts"])
 app.include_router(api_tokens.router, tags=["api-tokens"])
 app.include_router(email_accounts.router, tags=["accounts"])
 app.include_router(memos.router, tags=["memos"])
+app.include_router(system_docs.router, tags=["docs"])
