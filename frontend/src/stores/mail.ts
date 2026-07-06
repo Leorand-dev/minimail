@@ -2,8 +2,8 @@ import { create } from 'zustand';
 import type { Folder, MessageSummary, MessageDetail } from '@/api/mail';
 
 export type Pane = 'folders' | 'list' | 'preview';
-/** 邮件页主视图: mail=收件箱, compose=撰写, settings=设置, contacts=通讯录 */
-export type MailView = 'mail' | 'compose' | 'settings' | 'contacts';
+/** 邮件页主视图: mail=收件箱, compose=撰写, settings=设置, contacts=通讯录, apikeys=API密钥 */
+export type MailView = 'mail' | 'compose' | 'settings' | 'contacts' | 'apikeys';
 
 interface MailState {
   /** 当前邮箱文件夹 */

@@ -8,6 +8,7 @@ import PreviewPane from '@/features/mail/components/PreviewPane';
 import ComposePanel from '@/features/compose/ComposePanel';
 import SettingsPanel from '@/features/settings/SettingsPanel';
 import ContactsPanel from '@/features/contacts/ContactsPanel';
+import ApiKeysPanel from '@/features/api-keys/ApiKeysPanel';
 
 export default function MailLayout() {
   const {
@@ -106,6 +107,7 @@ export default function MailLayout() {
         {activeView === 'compose' && <ComposePanel />}
         {activeView === 'settings' && <SettingsPanel />}
         {activeView === 'contacts' && <ContactsPanel />}
+        {activeView === 'apikeys' && <ApiKeysPanel />}
       </div>
 
       {/* ═══ 响应式底部导航 (phone/small 屏幕) ═══ */}
