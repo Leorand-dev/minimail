@@ -3,7 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { fetchContacts, fetchGroups, createContact, updateContact, deleteContact } from '@/api/contacts';
 import type { Contact, ContactGroup, ContactsResponse } from '@/api/contacts';
 
-export default function ContactsPage() {
+interface ContactsPageProps {
+  onBack?: () => void;
+}
+
+export default function ContactsPage({ onBack }: ContactsPageProps) {
   const navigate = useNavigate();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [groups, setGroups] = useState<ContactGroup[]>([]);
@@ -80,7 +84,7 @@ export default function ContactsPage() {
     <div className="flex h-screen flex-col bg-white">
       {/* Toolbar */}
       <header className="flex items-center gap-2 px-3 py-2 border-b border-gray-200">
-        <button onClick={() => navigate('/mail')} className="text-sm text-[#066da5] hover:underline">← 返回邮箱</button>
+        <button onClick={() => onBack ? onBack() : navigate('/mail')} className="text-sm text-[#066da5] hover:underline">← 返回邮箱</button>
         <span className="flex-1 text-sm font-semibold text-gray-700">通讯录</span>
         <button
           onClick={() => { setEditing(null); setForm({ display_name: '', email: '', phone: '', phone_mobile: '', organization: '', notes: '', group_id: '' }); setShowForm(true); }}

@@ -54,7 +54,7 @@ export default function MessageList({ className = '', onSelectMessage }: Message
           <div className="flex gap-2 justify-center">
             {isConfigError && (
               <button
-                onClick={() => window.location.href = '/settings'}
+                onClick={() => useMailStore.getState().setActiveView('settings')}
                 className="px-4 py-1.5 bg-[#066da5] text-white text-xs rounded hover:bg-[#05588a]"
               >
                 ⚙️ 去设置

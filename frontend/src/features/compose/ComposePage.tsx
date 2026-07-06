@@ -3,7 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import api from '@/api/client';
 import AutocompleteInput from './AutocompleteInput';
 
-export default function ComposePage() {
+interface ComposePageProps {
+  onBack?: () => void;
+}
+
+export default function ComposePage({ onBack }: ComposePageProps) {
   const navigate = useNavigate();
   const toRef = useRef<HTMLInputElement>(null);
   const [from, setFrom] = useState('');
@@ -44,7 +48,7 @@ export default function ComposePage() {
       const res = await api.post('/api/mail/send', payload);
 
       setSuccess(`✅ 发送成功`);
-      setTimeout(() => navigate('/mail'), 2000);
+      setTimeout(() => onBack ? onBack() : navigate('/mail'), 2000);
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { detail?: string } }; message?: string };
       setError(axiosErr?.response?.data?.detail || axiosErr?.message || '发送失败');
@@ -59,7 +63,7 @@ export default function ComposePage() {
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate('/mail')}
+            onClick={() => onBack ? onBack() : navigate('/mail')}
             className="text-gray-500 hover:text-gray-700 text-sm"
           >
             ← 取消

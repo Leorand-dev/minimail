@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import type { Folder, MessageSummary, MessageDetail } from '@/api/mail';
 
 export type Pane = 'folders' | 'list' | 'preview';
+/** 邮件页主视图: mail=收件箱, compose=撰写, settings=设置, contacts=通讯录 */
+export type MailView = 'mail' | 'compose' | 'settings' | 'contacts';
 
 interface MailState {
   /** 当前邮箱文件夹 */
@@ -28,6 +30,8 @@ interface MailState {
   activePane: Pane;
   /** 错误信息 */
   error: string | null;
+  /** 当前主视图 */
+  activeView: MailView;
 
   setFolders: (folders: Folder[]) => void;
   setCurrentFolder: (folder: string) => void;
@@ -39,6 +43,7 @@ interface MailState {
   setActivePane: (pane: Pane) => void;
   setError: (error: string | null) => void;
   setPage: (page: number) => void;
+  setActiveView: (view: MailView) => void;
 }
 
 export const useMailStore = create<MailState>((set) => ({
@@ -54,8 +59,9 @@ export const useMailStore = create<MailState>((set) => ({
   loading: false,
   activePane: 'list',
   error: null,
+  activeView: 'mail',
 
-  setFolders: (folders) => set({ folders }),
+  setFolders: (folders) => set({ folders, activeView: 'mail' }),
   setCurrentFolder: (folder) => set({ currentFolder: folder, page: 1, selectedUid: null, previewMessage: null }),
   setMessages: (messages, total, page, totalPages) =>
     set({ messages, totalMessages: total, page, totalPages }),
@@ -66,4 +72,5 @@ export const useMailStore = create<MailState>((set) => ({
   setActivePane: (pane) => set({ activePane: pane }),
   setError: (error) => set({ error }),
   setPage: (page) => set({ page }),
+  setActiveView: (view) => set({ activeView: view }),
 }));

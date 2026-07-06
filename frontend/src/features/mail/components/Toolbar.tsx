@@ -1,9 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useMailStore } from '@/stores/mail';
 
 export default function Toolbar() {
-  const navigate = useNavigate();
+  const setActiveView = useMailStore((s) => s.setActiveView);
   const searchQuery = useMailStore((s) => s.searchQuery);
   const setSearchQuery = useMailStore((s) => s.setSearchQuery);
   const currentFolder = useMailStore((s) => s.currentFolder);
@@ -70,14 +69,14 @@ export default function Toolbar() {
       {/* Quick action buttons */}
       <div className="flex items-center gap-1">
         <button
-          onClick={() => navigate('/settings')}
+          onClick={() => setActiveView('settings')}
           className="px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 rounded"
           title="设置"
         >
           ⚙️
         </button>
         <button
-          onClick={() => navigate('/compose')}
+          onClick={() => setActiveView('compose')}
           className="px-2 py-1 text-xs text-white bg-[#066da5] hover:bg-[#05588a] rounded"
           title="写邮件"
         >

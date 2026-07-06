@@ -2,7 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchMailSettings, testMailConnection, updateMailSettings } from '@/api/settings';
 
-export default function SettingsPage() {
+interface SettingsPageProps {
+  onBack?: () => void;
+}
+
+export default function SettingsPage({ onBack }: SettingsPageProps) {
   const navigate = useNavigate();
 
   const [imap, setImap] = useState({ host: '', port: 993, ssl: true, username: '', password: '' });
@@ -73,7 +77,7 @@ export default function SettingsPage() {
     <div className="max-w-2xl mx-auto p-6">
       {/* Back */}
       <button
-        onClick={() => navigate('/mail')}
+        onClick={() => onBack ? onBack() : navigate('/mail')}
         className="text-sm text-[#066da5] hover:underline mb-4"
       >
         ← 返回邮箱
@@ -227,7 +231,7 @@ export default function SettingsPage() {
           {testing ? '测试中...' : '🔌 测试连接'}
         </button>
         <button
-          onClick={() => navigate('/mail')}
+          onClick={() => onBack ? onBack() : navigate('/mail')}
           className="px-6 py-2 text-sm text-gray-500 border border-gray-300 rounded hover:bg-gray-50"
         >
           取消

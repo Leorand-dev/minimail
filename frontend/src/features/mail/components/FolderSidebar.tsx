@@ -88,6 +88,7 @@ export default function FolderSidebar({ className = '', onSelectFolder }: Folder
   const folders = useMailStore((s) => s.folders);
   const currentFolder = useMailStore((s) => s.currentFolder);
   const setCurrentFolder = useMailStore((s) => s.setCurrentFolder);
+  const setActiveView = useMailStore((s) => s.setActiveView);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const unseenTotal = folders.reduce((sum, f) => sum + (f.unseen || 0), 0);
 
@@ -103,7 +104,7 @@ export default function FolderSidebar({ className = '', onSelectFolder }: Folder
       {/* ═══ 顶部: 写邮件按钮 ═══ */}
       <div className="px-3 pt-3 pb-2">
         <button
-          onClick={() => navigate('/compose')}
+          onClick={() => setActiveView('compose')}
           className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-[#066da5] text-white text-sm font-medium rounded-lg hover:bg-[#05588a] transition-colors shadow-sm"
         >
           ✏️ 写邮件
@@ -113,9 +114,9 @@ export default function FolderSidebar({ className = '', onSelectFolder }: Folder
       {/* ═══ 功能导航 ═══ */}
       <div className="px-3 pb-1">
         <div className="flex flex-col gap-0.5">
-          <NavItem icon="📥" label="收件箱" active={currentFolder === 'INBOX'} onClick={() => { setCurrentFolder('INBOX'); onSelectFolder?.(); }} />
-          <NavItem icon="👤" label="通讯录" onClick={() => navigate('/contacts')} />
-          <NavItem icon="⚙️" label="设置" onClick={() => navigate('/settings')} />
+          <NavItem icon="📥" label="收件箱" active={currentFolder === 'INBOX'} onClick={() => { setCurrentFolder('INBOX'); setActiveView('mail'); onSelectFolder?.(); }} />
+          <NavItem icon="👤" label="通讯录" onClick={() => setActiveView('contacts')} />
+          <NavItem icon="⚙️" label="设置" onClick={() => setActiveView('settings')} />
         </div>
       </div>
 

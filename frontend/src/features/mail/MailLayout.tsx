@@ -5,12 +5,17 @@ import FolderSidebar from '@/features/mail/components/FolderSidebar';
 import Toolbar from '@/features/mail/components/Toolbar';
 import MessageList from '@/features/mail/components/MessageList';
 import PreviewPane from '@/features/mail/components/PreviewPane';
+import ComposePanel from '@/features/compose/ComposePanel';
+import SettingsPanel from '@/features/settings/SettingsPanel';
+import ContactsPanel from '@/features/contacts/ContactsPanel';
 
 export default function MailLayout() {
   const {
     currentFolder,
     page,
     searchQuery,
+    activeView,
+    setActiveView,
     setFolders,
     setMessages,
     setLoading,
@@ -34,7 +39,7 @@ export default function MailLayout() {
       .catch(() => setError('无法加载文件夹'));
   }, [setFolders, setError]);
 
-  // 加载邮件列表 (当文件夹/页码/搜索词变化时)
+  // 加载邮件列表
   const loadMessages = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -54,71 +59,84 @@ export default function MailLayout() {
   }, [currentFolder, page, searchQuery, setMessages, setLoading, setError]);
 
   useEffect(() => {
-    loadMessages();
-  }, [loadMessages]);
+    if (activeView === 'mail') loadMessages();
+  }, [loadMessages, activeView]);
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-white text-sm">
-      {/* ═══ 顶部工具栏 ═══ */}
-      <Toolbar />
+      {/* ═══ 顶部工具栏 (只有邮件视图显示) ═══ */}
+      {activeView === 'mail' && <Toolbar />}
 
       {/* ═══ 三栏主体 ═══ */}
       <div className="flex flex-1 overflow-hidden">
-        {/* 左侧: 文件夹树 */}
+        {/* 左侧: 文件夹树 (始终显示) */}
         <FolderSidebar
           className={
-            activePane === 'folders' ? 'block' : 'hidden lg:block'
+            activePane === 'folders' || activeView !== 'mail'
+              ? 'block'
+              : 'hidden lg:block'
           }
           onSelectFolder={() => setActivePane('list')}
         />
 
-        {/* 中间: 邮件列表 */}
-        <MessageList
-          className={
-            activePane === 'list'
-              ? 'flex flex-col flex-1'
-              : 'hidden lg:flex lg:flex-col lg:flex-1'
-          }
-          onSelectMessage={() => setActivePane('preview')}
-        />
+        {/* 内容区: 根据 activeView 切换 */}
+        {activeView === 'mail' && (
+          <>
+            {/* 中间: 邮件列表 */}
+            <MessageList
+              className={
+                activePane === 'list'
+                  ? 'flex flex-col flex-1'
+                  : 'hidden lg:flex lg:flex-col lg:flex-1'
+              }
+              onSelectMessage={() => setActivePane('preview')}
+            />
 
-        {/* 右侧: 预览面板 */}
-        <PreviewPane
-          className={
-            activePane === 'preview'
-              ? 'block flex-1'
-              : 'hidden lg:block lg:flex-1'
-          }
-        />
+            {/* 右侧: 预览面板 */}
+            <PreviewPane
+              className={
+                activePane === 'preview'
+                  ? 'block flex-1'
+                  : 'hidden lg:block lg:flex-1'
+              }
+            />
+          </>
+        )}
+
+        {activeView === 'compose' && <ComposePanel />}
+        {activeView === 'settings' && <SettingsPanel />}
+        {activeView === 'contacts' && <ContactsPanel />}
       </div>
 
       {/* ═══ 响应式底部导航 (phone/small 屏幕) ═══ */}
-      <div className="flex border-t border-gray-200 lg:hidden">
-        <button
-          onClick={() => setActivePane('folders')}
-          className={`flex-1 py-2 text-xs font-medium text-center ${
-            activePane === 'folders' ? 'text-[#066da5] bg-[#e8f4fd]' : 'text-gray-500'
-          }`}
-        >
-          📁 文件夹
-        </button>
-        <button
-          onClick={() => setActivePane('list')}
-          className={`flex-1 py-2 text-xs font-medium text-center ${
-            activePane === 'list' ? 'text-[#066da5] bg-[#e8f4fd]' : 'text-gray-500'
-          }`}
-        >
-          ✉️ 邮件 ({totalMessages})
-        </button>
-        <button
-          onClick={() => setActivePane('preview')}
-          className={`flex-1 py-2 text-xs font-medium text-center ${
-            activePane === 'preview' ? 'text-[#066da5] bg-[#e8f4fd]' : 'text-gray-500'
-          }`}
-        >
-          👁️ 预览
-        </button>
-      </div>
+      {activeView === 'mail' && (
+        <div className="flex border-t border-gray-200 lg:hidden">
+          <button
+            onClick={() => setActivePane('folders')}
+            className={`flex-1 py-2 text-xs font-medium text-center ${
+              activePane === 'folders' ? 'text-[#066da5] bg-[#e8f4fd]' : 'text-gray-500'
+            }`}
+          >
+            📁 文件夹
+          </button>
+          <button
+            onClick={() => setActivePane('list')}
+            className={`flex-1 py-2 text-xs font-medium text-center ${
+              activePane === 'list' ? 'text-[#066da5] bg-[#e8f4fd]' : 'text-gray-500'
+            }`}
+          >
+            ✉️ 邮件 ({totalMessages})
+          </button>
+          <button
+            onClick={() => setActivePane('preview')}
+            className={`flex-1 py-2 text-xs font-medium text-center ${
+              activePane === 'preview' ? 'text-[#066da5] bg-[#e8f4fd]' : 'text-gray-500'
+            }`}
+          >
+            👁️ 预览
+          </button>
+        </div>
+      )}
     </div>
   );
 }
