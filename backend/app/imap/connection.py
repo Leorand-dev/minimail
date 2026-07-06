@@ -21,6 +21,17 @@ logger = logging.getLogger("minimail.imap")
 _connections: dict[uuid.UUID, aioimaplib.IMAP4_SSL] = {}
 _locks: dict[uuid.UUID, asyncio.Lock] = {}
 
+# ── 连接状态追踪 ──
+_connection_info: dict[uuid.UUID, dict] = {}
+
+
+def update_sync_time(user_id: uuid.UUID) -> None:
+    """更新用户最后同步时间."""
+    info = _connection_info.get(user_id)
+    if info:
+        from datetime import datetime, timezone
+        info["last_sync"] = datetime.now(timezone.utc)
+
 
 async def connect(
     host: str,
@@ -72,6 +83,7 @@ async def get_connection(
             )
             _connections[user_id] = imap
             logger.info("IMAP 连接 %s 已建立", user_id)
+            _connection_info[user_id] = {"connected": True, "last_sync": None}
             return imap
         except Exception as e:
             logger.error("IMAP 连接 %s 失败: %s", user_id, e)
@@ -89,6 +101,7 @@ async def close_connection(user_id: uuid.UUID) -> None:
                 await imap.close()
             except Exception:
                 pass
+        _connection_info[user_id] = {"connected": False, "last_sync": _connection_info.get(user_id, {}).get("last_sync")}
         logger.info("IMAP 连接 %s 已关闭")
 
 
@@ -96,6 +109,11 @@ async def close_all() -> None:
     """关闭所有 IMAP 连接 (服务关闭时调用)."""
     for uid in list(_connections.keys()):
         await close_connection(uid)
+
+
+def get_connection_info(user_id: uuid.UUID) -> dict:
+    """获取用户 IMAP 连接状态."""
+    return _connection_info.get(user_id, {"connected": False, "last_sync": None})
 
 
 @asynccontextmanager

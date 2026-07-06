@@ -134,3 +134,14 @@ export async function deleteFolder(name: string): Promise<void> {
 export function getAttachmentUrl(folder: string, uid: number, partId: string): string {
   return `/api/mail/messages/${uid}/attachment/${partId}?folder=${encodeURIComponent(folder)}`;
 }
+
+export interface ImapStatus {
+  connected: boolean;
+  last_sync: string | null;
+  host: string;
+}
+
+export async function fetchImapStatus(): Promise<ImapStatus> {
+  const res = await api.get('/mail/status');
+  return res.data;
+}

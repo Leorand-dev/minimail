@@ -28,7 +28,7 @@ from app.imap import (
     delete_folder,
     close_connection,
 )
-from app.imap.connection import get_connection
+from app.imap.connection import get_connection, update_sync_time, update_sync_time
 from app.imap.types import Folder, MessageDetail, MessageSummary
 from app.models.user import User
 from app.services.auth import get_current_user
@@ -294,6 +294,22 @@ async def delete(
 # ══════════════════════════════════════════
 # 附件下载
 # ══════════════════════════════════════════
+
+
+@router.get("/status", summary="IMAP 连接状态")
+async def imap_status(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取当前用户的 IMAP 连接状态和最后同步时间."""
+    from app.imap.connection import get_connection_info
+    cfg = await _get_user_imap_config(user, db)
+    info = get_connection_info(user.id)
+    return {
+        "connected": info.get("connected", False),
+        "last_sync": info.get("last_sync"),
+        "host": cfg["host"],
+    }
 
 
 @router.get("/messages/{uid}/attachment/{part_id}", summary="下载附件")
