@@ -1,5 +1,5 @@
 """
-Webmail — IMAP 连接管理器
+Minimail — IMAP 连接管理器
 
 为每个活跃用户维护一个 IMAP 连接, 支持自动重连和心跳保活。
 """
@@ -16,7 +16,7 @@ import aioimaplib
 
 from app.config import settings
 
-logger = logging.getLogger("webmail.imap")
+logger = logging.getLogger("minimail.imap")
 
 _connections: dict[uuid.UUID, aioimaplib.IMAP4_SSL] = {}
 _locks: dict[uuid.UUID, asyncio.Lock] = {}

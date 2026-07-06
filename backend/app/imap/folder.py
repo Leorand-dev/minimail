@@ -1,5 +1,5 @@
 """
-Webmail — IMAP 文件夹操作
+Minimail — IMAP 文件夹操作
 """
 
 from __future__ import annotations

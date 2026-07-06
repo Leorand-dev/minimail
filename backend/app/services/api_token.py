@@ -1,5 +1,5 @@
 """
-Webmail — API 令牌服务
+Minimail — API 令牌服务
 
 生成/验证/撤销 API 令牌。
 令牌格式: wm_<前缀32位随机十六进制> (如 wm_a3f8c2b1e9d07456...)

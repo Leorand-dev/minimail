@@ -107,7 +107,7 @@ async def get_folders(
     return folders
 
 
-@router.post("/folders")
+@router.post("/folders", summary="创建文件夹")
 async def create_folder_route(
     name: str = Query(..., description="文件夹名称"),
     user: User = Depends(get_current_user),
@@ -124,9 +124,9 @@ async def create_folder_route(
     return {"status": "ok"}
 
 
-@router.delete("/folders")
+@router.delete("/folders", summary="删除文件夹")
 async def delete_folder_route(
-    name: str = Query(...),
+    name: str = Query(..., description="要删除的文件夹名称"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -175,7 +175,7 @@ async def get_messages(
     }
 
 
-@router.get("/messages/search")
+@router.get("/messages/search", summary="搜索邮件")
 async def search_messages_route(
     folder: str = Query("INBOX"),
     query: str = Query("", description="搜索关键词"),
@@ -228,8 +228,8 @@ async def get_message(
 
 @router.post("/messages/{uid}/read")
 async def mark_read(
-    folder: str = Query("INBOX"),
-    uid: int = Path(...),
+    folder: str = Query("INBOX", description="邮箱文件夹"),
+    uid: int = Path(..., description="邮件 UID"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -244,8 +244,8 @@ async def mark_read(
 
 @router.post("/messages/{uid}/unread")
 async def mark_unread(
-    folder: str = Query("INBOX"),
-    uid: int = Path(...),
+    folder: str = Query("INBOX", description="邮箱文件夹"),
+    uid: int = Path(..., description="邮件 UID"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -260,9 +260,9 @@ async def mark_unread(
 
 @router.post("/messages/{uid}/move")
 async def move(
-    folder: str = Query(...),
-    uid: int = Path(...),
-    target: str = Query(...),
+    folder: str = Query(..., description="源文件夹"),
+    uid: int = Path(..., description="邮件 UID"),
+    target: str = Query(..., description="目标文件夹"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -275,10 +275,10 @@ async def move(
     return {"status": "ok" if ok else "failed"}
 
 
-@router.post("/messages/{uid}/delete")
+@router.post("/messages/{uid}/delete", summary="删除邮件")
 async def delete(
-    folder: str = Query("INBOX"),
-    uid: int = Path(...),
+    folder: str = Query("INBOX", description="邮箱文件夹"),
+    uid: int = Path(..., description="邮件 UID"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -296,11 +296,11 @@ async def delete(
 # ══════════════════════════════════════════
 
 
-@router.get("/messages/{uid}/attachment/{part_id}")
+@router.get("/messages/{uid}/attachment/{part_id}", summary="下载附件")
 async def download_attachment(
-    folder: str = Query("INBOX"),
-    uid: int = Path(..., ge=1),
-    part_id: str = Path(...),
+    folder: str = Query("INBOX", description="邮箱文件夹"),
+    uid: int = Path(..., ge=1, description="邮件 UID"),
+    part_id: str = Path(..., description="附件 Part ID (MIME)"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):

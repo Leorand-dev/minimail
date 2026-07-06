@@ -1,5 +1,5 @@
 """
-Webmail — FastAPI 应用入口
+Minimail — FastAPI 应用入口
 """
 
 from __future__ import annotations

@@ -1,5 +1,5 @@
 """
-Webmail — SMTP 邮件发送服务
+Minimail — SMTP 邮件发送服务
 
 使用 aiosmtplib 异步发送邮件，支持 SSL/TLS/STARTTLS。
 """
@@ -23,7 +23,7 @@ import aiosmtplib
 
 from app.models.user import User
 
-logger = logging.getLogger("webmail.smtp")
+logger = logging.getLogger("minimail.smtp")
 
 SMTP_TIMEOUT = 30
 

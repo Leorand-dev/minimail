@@ -1,5 +1,5 @@
 """
-Webmail — 数据库引擎与会话 (SQLAlchemy 2.0 async)
+Minimail — 数据库引擎与会话 (SQLAlchemy 2.0 async)
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ from sqlalchemy.orm import DeclarativeBase
 
 from app.config import settings
 
-logger = logging.getLogger("webmail.db")
+logger = logging.getLogger("minimail.db")
 
 engine = create_async_engine(
     settings.database_url,

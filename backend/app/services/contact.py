@@ -1,5 +1,5 @@
 """
-Webmail — 通讯录服务
+Minimail — 通讯录服务
 """
 
 from __future__ import annotations

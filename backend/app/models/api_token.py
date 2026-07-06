@@ -1,5 +1,5 @@
 """
-Webmail — API 访问令牌 ORM 模型
+Minimail — API 访问令牌 ORM 模型
 """
 
 from __future__ import annotations

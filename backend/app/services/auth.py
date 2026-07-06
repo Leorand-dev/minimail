@@ -1,5 +1,5 @@
 """
-Webmail — Auth service (注册/登录/JWT)
+Minimail — Auth service (注册/登录/JWT)
 """
 
 from __future__ import annotations

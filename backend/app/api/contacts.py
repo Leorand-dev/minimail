@@ -63,7 +63,7 @@ async def get_groups(
     return result
 
 
-@router.post("/groups", response_model=ContactGroupResponse, status_code=201)
+@router.post("/groups", response_model=ContactGroupResponse, status_code=201, summary="创建分组")
 async def create_group_route(
     data: ContactGroupCreate,
     user: User = Depends(get_current_user),
@@ -82,8 +82,8 @@ async def create_group_route(
 
 
 @router.put("/groups/{group_id}", response_model=ContactGroupResponse)
-async def update_group_route(
-    group_id: uuid.UUID = Path(...),
+async def update_group(
+    group_id: uuid.UUID = Path(..., description="分组 ID"),
     data: ContactGroupUpdate = ...,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -103,8 +103,8 @@ async def update_group_route(
 
 
 @router.delete("/groups/{group_id}", status_code=204)
-async def delete_group_route(
-    group_id: uuid.UUID = Path(...),
+async def delete_group(
+    group_id: uuid.UUID = Path(..., description="分组 ID"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -171,7 +171,7 @@ async def get_contacts(
 
 @router.get("/autocomplete", response_model=list[ContactResponse])
 async def autocomplete(
-    query: str = Query(..., min_length=1),
+    query: str = Query(..., min_length=1, description="搜索关键词, 匹配姓名或邮箱"),
     limit: int = Query(10, ge=1, le=50),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -191,8 +191,8 @@ async def autocomplete(
 
 
 @router.get("/{contact_id}", response_model=ContactResponse)
-async def get_contact_route(
-    contact_id: uuid.UUID = Path(...),
+async def get_contact(
+    contact_id: uuid.UUID = Path(..., description="联系人 ID"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -228,7 +228,7 @@ async def get_contact_route(
     )
 
 
-@router.post("", response_model=ContactResponse, status_code=201)
+@router.post("", response_model=ContactResponse, status_code=201, summary="创建联系人")
 async def create_contact_route(
     data: ContactCreate,
     user: User = Depends(get_current_user),
@@ -247,8 +247,8 @@ async def create_contact_route(
 
 
 @router.put("/{contact_id}", response_model=ContactResponse)
-async def update_contact_route(
-    contact_id: uuid.UUID = Path(...),
+async def update_contact(
+    contact_id: uuid.UUID = Path(..., description="联系人 ID"),
     data: ContactUpdate = ...,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -286,8 +286,8 @@ async def update_contact_route(
 
 
 @router.delete("/{contact_id}", status_code=204)
-async def delete_contact_route(
-    contact_id: uuid.UUID = Path(...),
+async def delete_contact(
+    contact_id: uuid.UUID = Path(..., description="联系人 ID"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):

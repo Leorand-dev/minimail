@@ -1,5 +1,5 @@
 """
-Webmail — ORM 模型
+Minimail — ORM 模型
 """
 
 from app.models.user import User

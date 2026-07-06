@@ -1,5 +1,5 @@
 """
-Webmail — API 令牌路由
+Minimail — API 令牌路由
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ router = APIRouter(prefix="/api/auth/tokens", tags=["api-tokens"])
 
 @router.get("", response_model=list[ApiTokenResponse])
 async def list_api_tokens(
-    include_revoked: bool = Query(False),
+    include_revoked: bool = Query(False, description="是否包含已撤销的令牌"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -61,7 +61,7 @@ async def create_api_token(
 
 @router.delete("/{token_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def revoke_api_token(
-    token_id: uuid.UUID = Path(...),
+    token_id: uuid.UUID = Path(..., description="API 令牌 ID"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -73,7 +73,7 @@ async def revoke_api_token(
 
 @router.put("/{token_id}", response_model=ApiTokenResponse)
 async def update_api_token(
-    token_id: uuid.UUID = Path(...),
+    token_id: uuid.UUID = Path(..., description="API 令牌 ID"),
     data: ApiTokenUpdate = ...,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),

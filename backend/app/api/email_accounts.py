@@ -92,7 +92,7 @@ async def add_account(
 
 @router.put("/{account_id}")
 async def edit_account(
-    account_id: uuid.UUID = Path(...),
+    account_id: uuid.UUID = Path(..., description="邮箱账户 ID"),
     body: AccountUpdate = ...,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -109,7 +109,7 @@ async def edit_account(
 
 @router.delete("/{account_id}", status_code=204)
 async def remove_account(
-    account_id: uuid.UUID = Path(...),
+    account_id: uuid.UUID = Path(..., description="邮箱账户 ID"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -122,7 +122,7 @@ async def remove_account(
 
 @router.post("/{account_id}/default")
 async def set_default_account(
-    account_id: uuid.UUID = Path(...),
+    account_id: uuid.UUID = Path(..., description="邮箱账户 ID"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> AccountResponse:

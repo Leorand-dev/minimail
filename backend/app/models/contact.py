@@ -1,5 +1,5 @@
 """
-Webmail — 联系人 ORM 模型
+Minimail — 联系人 ORM 模型
 
 支持:
 - 个人联系人 (Contact)

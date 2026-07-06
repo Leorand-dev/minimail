@@ -1,5 +1,5 @@
 """
-Webmail — 用户 ORM 模型
+Minimail — 用户 ORM 模型
 """
 
 from __future__ import annotations

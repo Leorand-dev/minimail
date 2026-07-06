@@ -1,5 +1,5 @@
 """
-Webmail — IMAP 协议层
+Minimail — IMAP 协议层
 """
 
 from app.imap.connection import get_connection, close_connection, close_all, managed_connection

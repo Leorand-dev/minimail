@@ -1,5 +1,5 @@
 """
-Webmail — 应用配置 (Pydantic Settings)
+Minimail — 应用配置 (Pydantic Settings)
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     debug: bool = True
 
     # ── 数据库 ──
-    database_url: str = "postgresql+asyncpg://webmail:webmail_dev@localhost:5432/webmail"
+    database_url: str = "postgresql+asyncpg://minimail:minimail_dev@localhost:5432/minimail"
     database_echo: bool = False
 
     # ── Redis ──

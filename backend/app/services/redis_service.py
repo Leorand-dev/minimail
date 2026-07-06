@@ -1,5 +1,5 @@
 """
-Webmail — Redis 服务 (连接池 + JSON 存取)
+Minimail — Redis 服务 (连接池 + JSON 存取)
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ import redis.asyncio as aioredis
 
 from app.config import settings
 
-logger = logging.getLogger("webmail.redis")
+logger = logging.getLogger("minimail.redis")
 
 redis_pool: Optional[aioredis.Redis] = None
 

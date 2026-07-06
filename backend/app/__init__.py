@@ -1,5 +1,5 @@
 """
-Webmail — 后端应用包
+Minimail — 后端应用包
 """
 
 from app import config, database

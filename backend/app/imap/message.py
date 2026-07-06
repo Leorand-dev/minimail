@@ -1,5 +1,5 @@
 """
-Webmail — IMAP 邮件操作 (搜索/获取/移动/删除)
+Minimail — IMAP 邮件操作 (搜索/获取/移动/删除)
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from app.imap.connection import get_connection
 from app.imap.parser import parse_message, parse_summary
 from app.imap.types import MessageDetail, MessageSummary
 
-logger = logging.getLogger("webmail.imap.message")
+logger = logging.getLogger("minimail.imap.message")
 
 FETCH_HEADERS = "(UID FLAGS RFC822.SIZE INTERNALDATE BODYSTRUCTURE BODY.PEEK[HEADER.FIELDS (Subject From To Cc Date Message-ID In-Reply-To References)])"
 
