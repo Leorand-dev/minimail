@@ -179,18 +179,23 @@ async def get_messages(
 async def search_messages_route(
     folder: str = Query("INBOX"),
     query: str = Query("", description="搜索关键词"),
+    date_from: str | None = Query(None, description="起始日期 (DD-Mon-YYYY, 如 01-Jul-2026)"),
+    date_to: str | None = Query(None, description="截止日期 (DD-Mon-YYYY, 如 31-Jul-2026)"),
+    unread_only: bool = Query(False, description="仅未读"),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    """搜索邮件."""
+    """搜索邮件 (支持关键词 + 日期范围 + 未读筛选)."""
     cfg = await _get_user_imap_config(user, db)
     imap = await get_connection(
         user.id, cfg["host"], cfg["port"], cfg["ssl"], cfg["username"], cfg["password"]
     )
     messages, total = await imap_search(
-        imap, folder=folder, query=query, page=page, page_size=page_size,
+        imap, folder=folder, query=query,
+        date_from=date_from, date_to=date_to, unread_only=unread_only,
+        page=page, page_size=page_size,
     )
 
     return {

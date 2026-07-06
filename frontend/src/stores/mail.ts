@@ -27,6 +27,10 @@ interface MailState {
   loading: boolean;
   error: string | null;
   searchQuery: string;
+  searchDateFrom: string;
+  searchDateTo: string;
+  searchUnreadOnly: boolean;
+  searchShowFilters: boolean;
   activePane: Pane;
   activeView: MailView;
   selectedMessage: MessageDetail | null;
@@ -42,6 +46,10 @@ interface MailState {
   setLoading: (v: boolean) => void;
   setError: (e: string | null) => void;
   setSearchQuery: (q: string) => void;
+  setSearchDateFrom: (d: string) => void;
+  setSearchDateTo: (d: string) => void;
+  setSearchUnreadOnly: (v: boolean) => void;
+  setSearchShowFilters: (v: boolean) => void;
   setActivePane: (p: Pane) => void;
   setActiveView: (v: MailView) => void;
   setSelectedMessage: (m: MessageDetail | null) => void;
@@ -60,6 +68,10 @@ export const useMailStore = create<MailState>((set) => ({
   loading: false,
   error: null,
   searchQuery: '',
+  searchDateFrom: '',
+  searchDateTo: '',
+  searchUnreadOnly: false,
+  searchShowFilters: false,
   activePane: 'list',
   activeView: 'mail',
   selectedMessage: null,
@@ -76,6 +88,10 @@ export const useMailStore = create<MailState>((set) => ({
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error }),
   setSearchQuery: (searchQuery) => set({ searchQuery, page: 1 }),
+  setSearchDateFrom: (searchDateFrom) => set({ searchDateFrom, page: 1 }),
+  setSearchDateTo: (searchDateTo) => set({ searchDateTo, page: 1 }),
+  setSearchUnreadOnly: (searchUnreadOnly) => set({ searchUnreadOnly, page: 1 }),
+  setSearchShowFilters: (searchShowFilters) => set({ searchShowFilters }),
   setActivePane: (activePane) => set({ activePane }),
   setActiveView: (activeView) => set({ activeView, selectedMessage: null, previewMessage: null }),
   setSelectedMessage: (selectedMessage) => set({ selectedMessage }),

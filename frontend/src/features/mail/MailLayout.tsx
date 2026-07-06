@@ -25,8 +25,9 @@ const VIEW_CONFIG: Record<string, { title: string; icon: string }> = {
 };
 
 export default function MailLayout() {
-  const { currentFolder, page, searchQuery, activeView, setActiveView,
-    setFolders, setMessages, setLoading, setError, activePane, setActivePane, totalMessages } = useMailStore();
+  const { currentFolder, page, searchQuery, searchDateFrom, searchDateTo,
+    searchUnreadOnly, activeView, setActiveView, activePane, setActivePane, totalMessages,
+    setFolders, setMessages, setLoading, setError } = useMailStore();
 
   const initRef = useRef(false);
 
@@ -56,7 +57,11 @@ export default function MailLayout() {
     setError(null);
     try {
       const res = searchQuery.trim()
-        ? await searchApi(searchQuery, currentFolder, page, 50)
+        ? await searchApi(searchQuery, currentFolder, page, 50, {
+            date_from: searchDateFrom || undefined,
+            date_to: searchDateTo || undefined,
+            unread_only: searchUnreadOnly || undefined,
+          })
         : await fetchMessages(currentFolder, page, 50);
       setMessages(res.messages, res.total, res.page, res.total_pages);
     } catch { setError('加载邮件失败'); }

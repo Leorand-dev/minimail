@@ -90,14 +90,22 @@ export async function fetchMessages(
   return res.data;
 }
 
+export interface SearchFilters {
+  query: string;
+  date_from?: string;
+  date_to?: string;
+  unread_only?: boolean;
+}
+
 export async function searchMessages(
   query: string,
   folder: string = 'INBOX',
   page: number = 1,
-  pageSize: number = 50
+  pageSize: number = 50,
+  filters?: { date_from?: string; date_to?: string; unread_only?: boolean }
 ): Promise<MessagesResponse> {
   const res = await api.get('/mail/messages/search', {
-    params: { query, folder, page, page_size: pageSize },
+    params: { query, folder, page, page_size: pageSize, ...filters },
   });
   return res.data;
 }

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useMailStore } from '@/stores/mail';
 import type { MessageSummary } from '@/api/mail';
 
 interface MessageRowProps {
@@ -39,9 +40,28 @@ function getSenderDisplay(from_: MessageSummary['from_']): string {
   return from_.name || from_.email || '未知';
 }
 
+/** 关键词高亮 (大小写不敏感, 转义正则特殊字符) */
+function highlightText(text: string, keyword: string): React.ReactNode {
+  if (!keyword || !text) return text;
+  try {
+    const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const parts = text.split(new RegExp(`(${escaped})`, 'gi'));
+    if (parts.length === 1) return text;
+    return parts.map((part, i) =>
+      part.toLowerCase() === keyword.toLowerCase()
+        ? <mark key={i} className="bg-yellow-200 rounded-none px-0">{part}</mark>
+        : part
+    );
+  } catch {
+    return text;
+  }
+}
+
 export default function MessageRow({ message, selected, onSelect }: MessageRowProps) {
   const flags = message.flags || [];
   const isFlagged = flags.includes('\\Flagged');
+  const searchQuery = useMailStore((s) => s.searchQuery);
+  const kw = searchQuery.trim();
 
   return (
     <div
@@ -65,18 +85,20 @@ export default function MessageRow({ message, selected, onSelect }: MessageRowPr
         ) : null}
       </div>
 
-      {/* Sender */}
+      {/* Sender with highlight */}
       <div className="flex-1 min-w-0 px-2 truncate text-sm">
         {!message.is_read ? (
-          <span className="text-gray-900">{getSenderDisplay(message.from_)}</span>
+          <span className="text-gray-900">{highlightText(getSenderDisplay(message.from_), kw)}</span>
         ) : (
-          <span className="text-gray-600">{getSenderDisplay(message.from_)}</span>
+          <span className="text-gray-600">{highlightText(getSenderDisplay(message.from_), kw)}</span>
         )}
       </div>
 
-      {/* Subject (shown on small screens as second row) */}
+      {/* Subject with highlight */}
       <div className="hidden sm:block flex-1 min-w-0 px-2 truncate text-sm text-gray-500">
-        {message.subject || '(无主题)'}
+        {message.subject
+          ? highlightText(message.subject, kw)
+          : <span className="text-gray-300">(无主题)</span>}
       </div>
 
       {/* Date */}

@@ -141,14 +141,27 @@ async def search_messages(
     query: str = "",
     page: int = 1,
     page_size: int = 50,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    unread_only: bool = False,
 ) -> tuple[list[MessageSummary], int]:
-    """搜索邮件 (支持文本搜索)."""
+    """搜索邮件 (支持文本搜索 + 日期/未读筛选)."""
     await imap.noop()
     await imap.select(folder)
 
+    # 构建 IMAP SEARCH 条件
+    criteria = []
     if query:
-        # 简单文本搜索 (SEARCH CHARSET UTF-8 TEXT)
-        search_cmd = f'CHARSET UTF-8 TEXT "{query}"'
+        criteria.append(f'TEXT "{{}}"'.format(query.replace('"', '')))
+    if date_from:
+        criteria.append(f"SINCE {date_from}")
+    if date_to:
+        criteria.append(f"BEFORE {date_to}")
+    if unread_only:
+        criteria.append("UNSEEN")
+
+    if criteria:
+        search_cmd = " ".join(criteria)
     else:
         search_cmd = "ALL"
 
