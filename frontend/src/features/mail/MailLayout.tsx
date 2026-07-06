@@ -54,27 +54,29 @@ export default function MailLayout() {
         <Toolbar />
       ) : (
         <header className="flex items-center gap-2 px-3 py-2 border-b border-gray-200 bg-white">
+          {/* Logo + App Name (same as Toolbar) */}
+          <div className="flex items-center gap-2 mr-2">
+            <div className="w-7 h-7 rounded-md bg-[#066da5] flex items-center justify-center text-white font-bold text-sm">M</div>
+            <span className="font-semibold text-gray-700 hidden sm:inline">Webmail</span>
+          </div>
+
+          {/* Back + Title */}
           <button
             onClick={() => setActiveView('mail')}
-            className="flex items-center gap-1.5 text-gray-500 hover:text-[#066da5] transition-colors"
+            className="flex items-center gap-1 text-sm text-gray-500 hover:text-[#066da5] transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            <span className="text-sm">返回</span>
+            <span>返回</span>
           </button>
-          <span className="text-sm font-semibold text-gray-700 ml-1">
-            {cfg.icon} {cfg.title}
-          </span>
+          <span className="text-sm font-semibold text-gray-700 ml-1">{cfg.icon} {cfg.title}</span>
           <div className="flex-1" />
-          {/* Contextual action buttons */}
+          {/* Contextual action buttons (same style as Toolbar) */}
           {(activeView === 'contacts' || activeView === 'apikeys') && (
             <button
-              onClick={() => {
-                // Dispatch a custom event the panel listens to
-                window.dispatchEvent(new CustomEvent('panel-new'));
-              }}
-              className="px-3 py-1.5 text-xs text-white bg-[#066da5] rounded hover:bg-[#05588a] transition-colors"
+              onClick={() => window.dispatchEvent(new CustomEvent('panel-new'))}
+              className="px-2 py-1 text-xs text-white bg-[#066da5] hover:bg-[#05588a] rounded"
             >
               + 新建
             </button>
@@ -82,7 +84,7 @@ export default function MailLayout() {
           {activeView === 'compose' && (
             <button
               onClick={() => window.dispatchEvent(new CustomEvent('compose-send'))}
-              className="px-4 py-1.5 text-xs text-white bg-[#066da5] rounded hover:bg-[#05588a] transition-colors font-medium"
+              className="px-2 py-1 text-xs text-white bg-[#066da5] hover:bg-[#05588a] rounded font-medium"
             >
               发送
             </button>
