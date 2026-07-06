@@ -9,6 +9,27 @@ interface MessageListProps {
   onSelectMessage?: () => void;
 }
 
+/** 骨架屏行 — 脉冲动画占位 */
+function SkeletonRow() {
+  return (
+    <div className="flex items-center px-3 py-2.5 border-b border-gray-100 animate-pulse">
+      <div className="w-8 flex-shrink-0" />
+      <div className="flex-1 px-2">
+        <div className="h-3 bg-gray-200 rounded w-3/5" />
+      </div>
+      <div className="hidden sm:block flex-1 px-2">
+        <div className="h-3 bg-gray-200 rounded w-4/5" />
+      </div>
+      <div className="hidden sm:block w-24 px-2">
+        <div className="h-3 bg-gray-200 rounded w-14 ml-auto" />
+      </div>
+      <div className="w-16 text-right">
+        <div className="h-3 bg-gray-200 rounded w-10 ml-auto" />
+      </div>
+    </div>
+  );
+}
+
 export default function MessageList({ className = '', onSelectMessage }: MessageListProps) {
   const messages = useMailStore((s) => s.messages);
   const loading = useMailStore((s) => s.loading);
@@ -56,14 +77,15 @@ export default function MessageList({ className = '', onSelectMessage }: Message
     }
   };
 
+  // ── Error state ──
   if (error) {
     const isConfigError = error === '请添加邮件账户';
     return (
-      <div className={`${className} items-center justify-center text-gray-400`}>
-        <div className="text-center max-w-xs">
-          <div className="text-3xl mb-3">{isConfigError ? '📭' : '⚠️'}</div>
-          <p className="mb-1 text-gray-500">{isConfigError ? '邮箱尚未配置' : '连接失败'}</p>
-          <p className="mb-3 text-xs text-gray-400">
+      <div className={`${className} flex items-center justify-center text-gray-400 bg-gray-50`}>
+        <div className="text-center max-w-xs animate-in fade-in duration-300">
+          <div className="text-4xl mb-3">{isConfigError ? '📭' : '⚠️'}</div>
+          <p className="mb-1 text-gray-500 font-medium">{isConfigError ? '邮箱尚未配置' : '连接失败'}</p>
+          <p className="mb-4 text-xs text-gray-400">
             {isConfigError
               ? '请先添加邮箱账户'
               : '请检查网络或者邮件账户设置'}
@@ -72,12 +94,12 @@ export default function MessageList({ className = '', onSelectMessage }: Message
             {isConfigError && (
               <button
                 onClick={() => useMailStore.getState().setActiveView('settings')}
-                className="px-4 py-1.5 bg-[#066da5] text-white text-xs rounded hover:bg-[#05588a]"
+                className="px-4 py-1.5 bg-[#066da5] text-white text-xs rounded hover:bg-[#05588a] transition-colors"
               >
                 ⚙️ 去设置
               </button>
             )}
-            <button onClick={handleRefresh} className="px-4 py-1.5 text-[#066da5] text-xs border border-[#066da5] rounded hover:bg-blue-50">
+            <button onClick={handleRefresh} className="px-4 py-1.5 text-[#066da5] text-xs border border-[#066da5] rounded hover:bg-blue-50 transition-colors">
               重试
             </button>
           </div>
@@ -87,57 +109,97 @@ export default function MessageList({ className = '', onSelectMessage }: Message
   }
 
   return (
-    <div className={`${className} min-w-0`}>
+    <div className={`${className} min-w-0 flex flex-col`}>
       {/* Column headers (Roundcube 风格) */}
       <div className="flex items-center px-3 py-1.5 border-b border-gray-200 bg-gray-50 text-[11px] font-semibold text-gray-500 uppercase tracking-wider select-none">
-        <div className="w-8 flex-shrink-0"></div>
+        <div className="w-8 flex-shrink-0" />
         <div className="flex-1 min-w-0 px-2">发件人</div>
-        <div className="hidden sm:block w-24 flex-shrink-0 px-2">日期</div>
-        <div className="w-16 flex-shrink-0 text-center">大小</div>
+        <div className="hidden sm:block flex-1 min-w-0 px-2">主题</div>
+        <div className="hidden sm:block w-24 flex-shrink-0 px-2 text-right">日期</div>
+        <div className="w-16 flex-shrink-0 text-right">大小</div>
       </div>
 
-      {/* Message rows */}
+      {/* Message rows / Loading / Empty */}
       <div className="flex-1 overflow-y-auto">
-        {loading && messages.length === 0 ? (
-          <div className="flex items-center justify-center h-32 text-gray-400">
-            <div className="w-5 h-5 border-2 border-[#066da5] border-t-transparent rounded-full animate-spin mr-2" />
-            加载中...
+        {/* ── Skeleton loading ── */}
+        {loading && messages.length === 0 && (
+          <div className="divide-y divide-transparent">
+            {Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)}
           </div>
-        ) : messages.length === 0 ? (
-          <div className="flex items-center justify-center h-32 text-gray-400">
-            暂无邮件
+        )}
+
+        {/* ── Empty states ── */}
+        {!loading && messages.length === 0 && (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center animate-in fade-in duration-300">
+              {searchQuery.trim() ? (
+                <>
+                  <div className="text-4xl mb-3">🔍</div>
+                  <p className="text-gray-500 font-medium mb-1">未找到匹配的邮件</p>
+                  <p className="text-xs text-gray-400">尝试修改搜索词或筛选条件</p>
+                </>
+              ) : (
+                <>
+                  <div className="text-4xl mb-3">📬</div>
+                  <p className="text-gray-500 font-medium mb-1">暂无邮件</p>
+                  <p className="text-xs text-gray-400">
+                    {currentFolder === 'INBOX' ? '收件箱为空' : `文件夹 "${currentFolder}" 中没有邮件`}
+                  </p>
+                </>
+              )}
+            </div>
           </div>
-        ) : (
-          messages.map((msg) => (
-            <MessageRow
-              key={`${msg.uid}-${currentFolder}`}
-              message={msg}
-              selected={msg.uid === selectedUid}
-              onSelect={() => handleSelect(msg)}
-            />
-          ))
+        )}
+
+        {/* ── Message rows ── */}
+        {!loading && messages.length > 0 && (
+          <>
+            {messages.map((msg, i) => (
+              <div
+                key={`${msg.uid}-${currentFolder}`}
+                className="animate-in fade-in slide-in-from-top-1 duration-200"
+                style={{ animationDelay: `${Math.min(i * 20, 300)}ms`, animationFillMode: 'backwards' } as React.CSSProperties}
+              >
+                <MessageRow
+                  message={msg}
+                  selected={msg.uid === selectedUid}
+                  onSelect={() => handleSelect(msg)}
+                />
+              </div>
+            ))}
+          </>
+        )}
+
+        {/* ── Loading overlay (when paginating) ── */}
+        {loading && messages.length > 0 && (
+          <div className="sticky bottom-0 flex items-center justify-center py-2 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+            <div className="flex items-center gap-2 text-xs text-gray-400">
+              <div className="w-3 h-3 border-2 border-[#066da5] border-t-transparent rounded-full animate-spin" />
+              刷新中...
+            </div>
+          </div>
         )}
       </div>
 
-      {/* Pagination (Roundcube 风格底部页码) */}
-      {totalPages > 1 && (
+      {/* ── Pagination ── */}
+      {totalPages > 1 && !loading && (
         <div className="flex items-center justify-between px-3 py-1.5 border-t border-gray-200 bg-gray-50 text-xs text-gray-500">
-          <span>{totalMessages} 封邮件</span>
+          <span className="font-medium">{totalMessages} 封邮件</span>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setPage(Math.max(1, page - 1))}
               disabled={page <= 1}
-              className="px-2 py-0.5 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
+              className="px-2 py-0.5 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity"
             >
               ← 上一页
             </button>
-            <span className="font-medium">
+            <span className="font-medium tabular-nums">
               {page} / {totalPages}
             </span>
             <button
               onClick={() => setPage(Math.min(totalPages, page + 1))}
               disabled={page >= totalPages}
-              className="px-2 py-0.5 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
+              className="px-2 py-0.5 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity"
             >
               下一页 →
             </button>

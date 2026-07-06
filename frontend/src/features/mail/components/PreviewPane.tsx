@@ -28,19 +28,38 @@ export default function PreviewPane({ className = '' }: PreviewPaneProps) {
   if (!previewMessage && !loading) {
     return (
       <div className={`${className} flex items-center justify-center text-gray-400 bg-gray-50`}>
-        <div className="text-center">
-          <div className="text-3xl mb-2">📧</div>
-          <p className="text-sm">选择一封邮件进行预览</p>
+        <div className="text-center animate-in fade-in duration-300">
+          <div className="text-4xl mb-2">📧</div>
+          <p className="text-sm text-gray-400">选择一封邮件进行预览</p>
         </div>
       </div>
     );
   }
 
+  // ── Loading skeleton for preview ──
   if (loading && !previewMessage) {
     return (
-      <div className={`${className} flex items-center justify-center text-gray-400`}>
-        <div className="w-5 h-5 border-2 border-[#066da5] border-t-transparent rounded-full animate-spin mr-2" />
-        加载中...
+      <div className={`${className} flex flex-col bg-white border-l border-gray-200 animate-pulse`}>
+        <div className="px-4 py-3 border-b border-gray-200 space-y-3">
+          <div className="flex justify-between">
+            <div className="h-4 bg-gray-200 rounded w-3/5" />
+            <div className="flex gap-1">
+              <div className="h-6 bg-gray-200 rounded w-14" />
+              <div className="h-6 bg-gray-200 rounded w-14" />
+              <div className="h-6 bg-gray-200 rounded w-14" />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <div className="h-3 bg-gray-100 rounded w-1/3" />
+            <div className="h-3 bg-gray-100 rounded w-1/2" />
+            <div className="h-3 bg-gray-100 rounded w-1/4" />
+          </div>
+        </div>
+        <div className="flex-1 p-4 space-y-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-3 bg-gray-100 rounded" style={{ width: `${60 + Math.random() * 30}%` }} />
+          ))}
+        </div>
       </div>
     );
   }

@@ -144,9 +144,10 @@ export default function FolderSidebar({ className = '', onSelectFolder }: Folder
       {/* ═══ 文件夹列表 ═══ */}
       <nav className="flex-1 overflow-y-auto pb-1 space-y-0.5 px-1">
         {folders.length === 0 ? (
-          <div className="px-3 py-3 text-xs text-gray-400 text-center">
-            暂无文件夹<br />
-            <span className="text-[10px]">请先在设置中配置邮箱</span>
+          <div className="px-3 py-3 space-y-2 animate-pulse">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-5 bg-gray-200 rounded" style={{ width: `${55 + Math.random() * 35}%`, marginLeft: i > 2 ? 12 : 0 }} />
+            ))}
           </div>
         ) : (
           hierarchy.map(({ folder, depth }) => (

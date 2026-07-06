@@ -49,12 +49,18 @@ function highlightText(text: string, keyword: string): React.ReactNode {
     if (parts.length === 1) return text;
     return parts.map((part, i) =>
       part.toLowerCase() === keyword.toLowerCase()
-        ? <mark key={i} className="bg-yellow-200 rounded-none px-0">{part}</mark>
+        ? <mark key={i} className="bg-yellow-200 text-gray-900 rounded-none px-0">{part}</mark>
         : part
     );
   } catch {
     return text;
   }
+}
+
+/** 从发件人提取首字母头像 */
+function getAvatarLetter(from_: MessageSummary['from_']): string {
+  const display = getSenderDisplay(from_);
+  return display.charAt(0).toUpperCase();
 }
 
 export default function MessageRow({ message, selected, onSelect }: MessageRowProps) {
@@ -66,32 +72,34 @@ export default function MessageRow({ message, selected, onSelect }: MessageRowPr
   return (
     <div
       onClick={onSelect}
-      className={`flex items-center px-3 py-2 border-b border-gray-100 cursor-pointer transition-colors ${
+      className={`flex items-center px-3 py-2.5 border-b border-gray-100 cursor-pointer transition-all duration-150 ${
         selected
-          ? 'bg-[#c7dbff]'
+          ? 'bg-[#c7dbff] border-l-2 border-l-[#066da5] shadow-sm'
           : message.is_read
-          ? 'bg-white hover:bg-[#edf3ff]'
-          : 'bg-white font-semibold hover:bg-[#edf3ff]'
+          ? 'bg-white hover:bg-[#edf3ff] hover:border-l-2 hover:border-l-transparent'
+          : 'bg-white font-semibold hover:bg-[#edf3ff] hover:border-l-2 hover:border-l-transparent'
       }`}
     >
-      {/* Attachment / Flag icon */}
-      <div className="w-8 flex-shrink-0 text-center text-xs">
+      {/* Avatar / Flag icon */}
+      <div className="w-8 flex-shrink-0 flex items-center justify-center">
         {isFlagged ? (
-          <span className="text-yellow-500">⭐</span>
-        ) : message.has_attachments ? (
-          <span className="text-gray-400">📎</span>
+          <span className="text-yellow-500 text-sm">⭐</span>
         ) : !message.is_read ? (
-          <span className="text-[#066da5] text-lg leading-none">•</span>
-        ) : null}
+          <div className="w-7 h-7 rounded-full bg-[#066da5] flex items-center justify-center text-white text-[11px] font-bold">
+            {getAvatarLetter(message.from_)}
+          </div>
+        ) : (
+          <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-[11px] font-medium">
+            {getAvatarLetter(message.from_)}
+          </div>
+        )}
       </div>
 
       {/* Sender with highlight */}
       <div className="flex-1 min-w-0 px-2 truncate text-sm">
-        {!message.is_read ? (
-          <span className="text-gray-900">{highlightText(getSenderDisplay(message.from_), kw)}</span>
-        ) : (
-          <span className="text-gray-600">{highlightText(getSenderDisplay(message.from_), kw)}</span>
-        )}
+        <span className={message.is_read ? 'text-gray-600' : 'text-gray-900'}>
+          {highlightText(getSenderDisplay(message.from_), kw)}
+        </span>
       </div>
 
       {/* Subject with highlight */}
@@ -101,13 +109,18 @@ export default function MessageRow({ message, selected, onSelect }: MessageRowPr
           : <span className="text-gray-300">(无主题)</span>}
       </div>
 
+      {/* Attachment icon inline */}
+      {message.has_attachments && (
+        <span className="text-gray-400 text-xs mr-1 flex-shrink-0">📎</span>
+      )}
+
       {/* Date */}
-      <div className="hidden sm:block w-24 flex-shrink-0 px-2 text-right text-xs text-gray-400">
+      <div className="hidden sm:block w-24 flex-shrink-0 px-2 text-right text-xs text-gray-400 tabular-nums">
         {formatDate(message.date)}
       </div>
 
       {/* Size */}
-      <div className="w-16 flex-shrink-0 text-right text-xs text-gray-400">
+      <div className="w-16 flex-shrink-0 text-right text-xs text-gray-400 tabular-nums">
         {formatSize(message.size)}
       </div>
     </div>
