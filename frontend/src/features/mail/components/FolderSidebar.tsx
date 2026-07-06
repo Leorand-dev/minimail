@@ -1,17 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMailStore } from '@/stores/mail';
 import { useAuthStore } from '@/stores/auth';
 import type { Folder } from '@/api/mail';
-import { fetchImapStatus } from '@/api/mail';
-import type { ImapStatus } from '@/api/mail';
+import { fetchImapStatus, fetchAccountFolders } from '@/api/mail';
+import type { ImapStatus, AccountFolderGroup } from '@/api/mail';
+import api from '@/api/client';
 
 interface FolderSidebarProps {
   className?: string;
   onSelectFolder?: () => void;
 }
 
-/** Render a single folder item with indentation for hierarchy */
 function FolderItem({
   folder,
   depth = 0,
@@ -52,61 +52,121 @@ function FolderItem({
   );
 }
 
-/** Build hierarchy from flat folder list */
-function buildHierarchy(folders: Folder[]): { folder: Folder; depth: number }[] {
-  const result: { folder: Folder; depth: number }[] = [];
-  const added = new Set<string>();
-
-  // INBOX first
-  const inbox = folders.find((f) => f.name === 'INBOX');
-  if (inbox) {
-    result.push({ folder: inbox, depth: 0 });
-    added.add('INBOX');
-  }
-
-  // Standard folders
-  for (const name of ['Sent', 'Drafts', 'Junk', 'Trash', 'Archive']) {
-    const f = folders.find((folder) => folder.name === name);
-    if (f && !added.has(name)) {
-      result.push({ folder: f, depth: 0 });
-      added.add(name);
-    }
-  }
-
-  // Remaining non-container folders
-  for (const f of folders) {
-    if (!added.has(f.name) && !f.is_container) {
-      const depth = f.hierarchy.length > 1 ? f.hierarchy.length - 1 : 0;
-      result.push({ folder: f, depth });
-      added.add(f.name);
-    }
-  }
-
-  return result;
-}
-
 export default function FolderSidebar({ className = '', onSelectFolder }: FolderSidebarProps) {
   const navigate = useNavigate();
   const folders = useMailStore((s) => s.folders);
+  const accountFolders = useMailStore((s) => s.accountFolders);
+  const setAccountFolders = useMailStore((s) => s.setAccountFolders);
+  const currentAccount = useMailStore((s) => s.currentAccount);
+  const setCurrentAccount = useMailStore((s) => s.setCurrentAccount);
   const currentFolder = useMailStore((s) => s.currentFolder);
   const setCurrentFolder = useMailStore((s) => s.setCurrentFolder);
   const setActiveView = useMailStore((s) => s.setActiveView);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const unseenTotal = folders.reduce((sum, f) => sum + (f.unseen || 0), 0);
 
-  const hierarchy = buildHierarchy(folders);
-
-  // IMAP connection status
   const [imapStatus, setImapStatus] = useState<ImapStatus | null>(null);
+  const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
 
+  // Load account-folders on mount
   useEffect(() => {
+    const loadAccounts = async () => {
+      try {
+        const { fetchAccounts } = await import('@/api/accounts');
+        const accounts = await fetchAccounts();
+        if (accounts.length === 0) {
+          // No accounts, try demo
+          const demoRes = await api.get('/mail/demo');
+          if (demoRes.data?.folders) {
+            setAccountFolders([{
+              account_id: 'demo',
+              account_email: 'demo@example.com',
+              account_name: '示例账户',
+              folders: demoRes.data.folders,
+            }]);
+            setExpandedAccounts(new Set(['demo']));
+          }
+          return;
+        }
+        const groups: AccountFolderGroup[] = [];
+        const expanded = new Set<string>();
+        for (const acc of accounts) {
+          if (!acc.imap_host) continue;
+          try {
+            const group = await fetchAccountFolders(acc.id);
+            groups.push(group);
+            expanded.add(group.account_id);
+          } catch { /* skip */ }
+        }
+        if (groups.length > 0) {
+          setAccountFolders(groups);
+          setExpandedAccounts(expanded);
+        }
+      } catch {
+        // Fallback to demo
+        try {
+          const demoRes = await api.get('/mail/demo');
+          if (demoRes.data?.folders) {
+            setAccountFolders([{
+              account_id: 'demo',
+              account_email: 'demo@example.com',
+              account_name: '示例账户',
+              folders: demoRes.data.folders,
+            }]);
+            setExpandedAccounts(new Set(['demo']));
+          }
+        } catch {}
+      }
+    };
+    loadAccounts();
+
     fetchImapStatus().then(setImapStatus).catch(() => {});
-  }, []);
+  }, [setAccountFolders]);
+
+  const handleSelectAccountInbox = (accountId: string | null) => {
+    setCurrentAccount(accountId);
+    setCurrentFolder('INBOX');
+    setActiveView('mail');
+    onSelectFolder?.();
+  };
+
+  const handleSelectFolder = (accountId: string, folderName: string) => {
+    setCurrentAccount(accountId);
+    setCurrentFolder(folderName);
+    setActiveView('mail');
+    onSelectFolder?.();
+  };
+
+  const handleSelectUnifiedInbox = () => {
+    setCurrentAccount(null);
+    setCurrentFolder('INBOX');
+    setActiveView('mail');
+    onSelectFolder?.();
+  };
+
+  const toggleAccount = (id: string) => {
+    setExpandedAccounts((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const handleLogout = () => {
     clearAuth();
     navigate('/login');
   };
+
+  // Build flat folder list for current selection (for compatibility)
+  const flatFolders = accountFolders.flatMap((g) => g.folders);
+  useEffect(() => {
+    if (useMailStore.getState().folders.length === 0 && flatFolders.length > 0) {
+      useMailStore.getState().setFolders(flatFolders);
+    }
+  }, [flatFolders]);
+
+  const isUnifiedSelected = currentAccount === null && currentFolder === 'INBOX';
 
   return (
     <aside className={`w-56 bg-[#f5f6f7] border-r border-gray-200 flex flex-col ${className}`}>
@@ -123,7 +183,7 @@ export default function FolderSidebar({ className = '', onSelectFolder }: Folder
       {/* ═══ 功能导航 ═══ */}
       <div className="px-3 pb-1">
         <div className="flex flex-col gap-0.5">
-          <NavItem icon="📥" label="收件箱" active={currentFolder === 'INBOX'} onClick={() => { setCurrentFolder('INBOX'); setActiveView('mail'); onSelectFolder?.(); }} />
+          <NavItem icon="📥" label="收件箱" active={false} onClick={() => setActiveView('mail')} />
           <NavItem icon="👤" label="通讯录" onClick={() => setActiveView('contacts')} />
           <NavItem icon="🔑" label="API 密钥" onClick={() => setActiveView('apikeys')} />
           <NavItem icon="📄" label="API 文档" onClick={() => setActiveView('docs')} />
@@ -131,43 +191,72 @@ export default function FolderSidebar({ className = '', onSelectFolder }: Folder
         </div>
       </div>
 
-      {/* ═══ 分隔线 ═══ */}
       <div className="border-t border-gray-200 mx-3" />
 
-      {/* ═══ 文件夹标题 ═══ */}
+      {/* ═══ 统一收件箱 ═══ */}
       <div className="px-3 pt-2 pb-1">
-        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-          文件夹
-        </h2>
+        <div
+          onClick={handleSelectUnifiedInbox}
+          className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer text-sm rounded ${
+            isUnifiedSelected
+              ? 'bg-[#d0e2f3] text-[#066da5] font-medium'
+              : 'text-gray-700 hover:bg-gray-100'
+          }`}
+        >
+          <span>📥</span>
+          <span className="font-medium">统一收件箱</span>
+        </div>
       </div>
 
-      {/* ═══ 文件夹列表 ═══ */}
-      <nav className="flex-1 overflow-y-auto pb-1 space-y-0.5 px-1">
-        {folders.length === 0 ? (
+      <div className="border-t border-gray-200 mx-3" />
+
+      {/* ═══ 账户文件夹 ═══ */}
+      <div className="flex-1 overflow-y-auto">
+        {accountFolders.length === 0 ? (
           <div className="px-3 py-3 space-y-2 animate-pulse">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-5 bg-gray-200 rounded" style={{ width: `${55 + Math.random() * 35}%`, marginLeft: i > 2 ? 12 : 0 }} />
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-5 bg-gray-200 rounded" style={{ width: `${60 + Math.random() * 30}%` }} />
             ))}
           </div>
         ) : (
-          hierarchy.map(({ folder, depth }) => (
-            <FolderItem
-              key={folder.name}
-              folder={folder}
-              depth={depth}
-              selected={folder.name === currentFolder}
-              onSelect={() => {
-                setCurrentFolder(folder.name);
-                onSelectFolder?.();
-              }}
-            />
+          accountFolders.map((group) => (
+            <div key={group.account_id} className="mb-1">
+              {/* 账户标题 */}
+              <div
+                onClick={() => toggleAccount(group.account_id)}
+                className="flex items-center gap-1 px-3 py-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-200"
+              >
+                <span className="text-xs">{expandedAccounts.has(group.account_id) ? '▼' : '▶'}</span>
+                <span className="truncate">{group.account_name}</span>
+                <span className="text-[10px] text-gray-400 normal-case font-normal">{group.account_email}</span>
+              </div>
+
+              {/* 账户的文件夹列表 */}
+              {expandedAccounts.has(group.account_id) && (
+                <div className="space-y-0.5 px-1 pb-1">
+                  {group.folders.map((folder) => {
+                    const isSelected = currentFolder === folder.name && currentAccount === group.account_id;
+                    return (
+                      <FolderItem
+                        key={`${group.account_id}-${folder.name}`}
+                        folder={folder}
+                        selected={isSelected}
+                        onSelect={() => handleSelectFolder(group.account_id, folder.name)}
+                      />
+                    );
+                  })}
+                  {group.folders.length === 0 && (
+                    <div className="px-3 py-1 text-[10px] text-gray-400">正在加载...</div>
+                  )}
+                </div>
+              )}
+            </div>
           ))
         )}
-      </nav>
+      </div>
 
       {/* ═══ 底部状态 ═══ */}
       <div className="px-3 py-2 border-t border-gray-200 space-y-1">
-        {/* IMAP 连接状态 */}
         <div className="flex items-center gap-1.5 px-3 text-[10px]">
           <span className={`inline-block w-1.5 h-1.5 rounded-full ${
             imapStatus?.connected ? 'bg-green-500' : 'bg-red-400'
@@ -194,7 +283,7 @@ export default function FolderSidebar({ className = '', onSelectFolder }: Folder
           )}
         </div>
         <div className="text-[10px] text-gray-400 px-3 mb-1">
-          {folders.length} 个文件夹 · {unseenTotal} 封未读
+          {flatFolders.length} 个文件夹 · {unseenTotal} 封未读
         </div>
         <button
           onClick={handleLogout}

@@ -153,3 +153,15 @@ export async function fetchImapStatus(): Promise<ImapStatus> {
   const res = await api.get('/mail/status');
   return res.data;
 }
+
+export interface AccountFolderGroup {
+  account_id: string;
+  account_email: string;
+  account_name: string;
+  folders: Folder[];
+}
+
+export async function fetchAccountFolders(accountId: string): Promise<AccountFolderGroup> {
+  const res = await api.get(`/mail/account-folders/${accountId}`);
+  return res.data;
+}

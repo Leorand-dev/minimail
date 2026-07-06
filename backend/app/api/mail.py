@@ -107,6 +107,35 @@ async def get_folders(
     return folders
 
 
+@router.get("/account-folders/{account_id}", summary="获取指定账户的文件夹")
+async def get_account_folders(
+    account_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取指定邮箱账户的文件夹列表."""
+    from app.services.email_account import get_account
+    acc = await get_account(db, account_id, user.id)
+    if not acc or not acc.imap_host:
+        raise HTTPException(status_code=404, detail="账户未找到或未配置")
+    
+    cfg = await _get_user_imap_config(user, db, account_id)
+    try:
+        imap = await get_connection(
+            user.id, cfg["host"], cfg["port"], cfg["ssl"], cfg["username"], cfg["password"]
+        )
+        folders = await imap_list_folders(imap)
+    except:
+        folders = []
+    
+    return {
+        "account_id": str(account_id),
+        "account_email": acc.email,
+        "account_name": acc.name or acc.email.split("@")[0],
+        "folders": [f.model_dump() for f in folders],
+    }
+
+
 @router.post("/folders", summary="创建文件夹")
 async def create_folder_route(
     name: str = Query(..., description="文件夹名称"),

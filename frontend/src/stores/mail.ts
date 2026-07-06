@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Folder, MessageSummary, MessageDetail } from '@/api/mail';
+import type { Folder, MessageSummary, MessageDetail, AccountFolderGroup } from '@/api/mail';
 
 export type Pane = 'folders' | 'list' | 'preview';
 /** 邮件页主视图 */
@@ -19,6 +19,8 @@ export interface ComposePrefill {
 
 interface MailState {
   folders: Folder[];
+  accountFolders: AccountFolderGroup[];
+  currentAccount: string | null; // null = unified inbox
   currentFolder: string;
   messages: MessageSummary[];
   totalMessages: number;
@@ -39,9 +41,11 @@ interface MailState {
   composePrefill: ComposePrefill | null;
 
   setFolders: (folders: Folder[]) => void;
+  setAccountFolders: (acc: AccountFolderGroup[]) => void;
+  setCurrentAccount: (id: string | null) => void;
+  setCurrentFolder: (f: string) => void;
   setMessages: (messages: MessageSummary[], total?: number, page?: number, totalPages?: number) => void;
   setTotalMessages: (n: number) => void;
-  setCurrentFolder: (f: string) => void;
   setPage: (p: number) => void;
   setLoading: (v: boolean) => void;
   setError: (e: string | null) => void;
@@ -60,6 +64,8 @@ interface MailState {
 
 export const useMailStore = create<MailState>((set) => ({
   folders: [],
+  accountFolders: [],
+  currentAccount: null,
   currentFolder: 'INBOX',
   messages: [],
   totalMessages: 0,
@@ -80,6 +86,8 @@ export const useMailStore = create<MailState>((set) => ({
   composePrefill: null,
 
   setFolders: (folders) => set({ folders }),
+  setAccountFolders: (accountFolders) => set({ accountFolders }),
+  setCurrentAccount: (currentAccount) => set({ currentAccount, page: 1 }),
   setMessages: (messages, total, page, totalPages) =>
     set({ messages, totalMessages: total ?? 0, page: page ?? 1, totalPages: totalPages ?? 1 }),
   setTotalMessages: (n) => set({ totalMessages: n }),
