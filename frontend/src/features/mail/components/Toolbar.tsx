@@ -24,7 +24,7 @@ export default function Toolbar() {
   };
 
   return (
-    <header className="flex items-center gap-2 px-3 py-2 border-b border-gray-200 bg-white">
+    <header className="flex items-center gap-2 px-3 h-[55px] border-b border-gray-200 bg-white">
       {/* Logo + Title */}
       <div className="flex items-center gap-2 mr-2">
         <div className="w-7 h-7 rounded-md bg-[#066da5] flex items-center justify-center text-white font-bold text-sm">
