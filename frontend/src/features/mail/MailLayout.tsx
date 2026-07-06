@@ -24,9 +24,6 @@ export default function MailLayout() {
     activePane,
     setActivePane,
     totalMessages,
-    totalPages,
-    setSearchQuery,
-    setPage,
   } = useMailStore();
 
   const initRef = useRef(false);
