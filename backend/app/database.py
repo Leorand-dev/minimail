@@ -35,15 +35,22 @@ class Base(DeclarativeBase):
 
 
 async def init_db() -> None:
-    """应用启动时: 创建所有表."""
+    """应用启动时: 创建所有表 (不依赖 pgvector)."""
     try:
+        # 先试创建 pgvector 扩展 (独立连接, 失败不影响建表)
+        try:
+            async with engine.connect() as conn:
+                await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+                await conn.commit()
+        except Exception:
+            logger.info("pgvector 扩展不可用, 跳过")
+
+        # 创建所有表 (新连接)
         async with engine.begin() as conn:
-            # 启用 pgvector 扩展
-            await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
             await conn.run_sync(Base.metadata.create_all)
         logger.info("数据库表已创建/验证")
     except Exception as e:
-        logger.warning("数据库不可用, 跳过建表: %s", e)
+        logger.warning("数据库表创建失败: %s", e)
 
 
 async def close_db() -> None:

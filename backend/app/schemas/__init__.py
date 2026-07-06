@@ -2,18 +2,5 @@
 Webmail — Pydantic Schemas
 """
 
-from app.schemas.auth import (
-    LoginRequest,
-    RefreshRequest,
-    RegisterRequest,
-    TokenResponse,
-    UserResponse,
-)
-
-__all__ = [
-    "RegisterRequest",
-    "LoginRequest",
-    "RefreshRequest",
-    "TokenResponse",
-    "UserResponse",
-]
+from app.schemas.auth import *  # noqa: F401, F403
+from app.schemas.contact import *  # noqa: F401, F403

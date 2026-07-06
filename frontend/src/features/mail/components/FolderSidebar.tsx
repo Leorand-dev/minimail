@@ -115,8 +115,16 @@ export default function FolderSidebar({ className = '', onSelectFolder }: Folder
       </nav>
 
       {/* Quota / bottom */}
-      <div className="px-3 py-2 border-t border-gray-200 text-[10px] text-gray-400">
-        {folders.length} 个文件夹 · {unseenTotal} 封未读
+      <div className="px-3 py-2 border-t border-gray-200">
+        <button
+          onClick={() => window.location.href = '/contacts'}
+          className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-200 rounded"
+        >
+          👤 通讯录
+        </button>
+        <div className="mt-1 text-[10px] text-gray-400 px-3">
+          {folders.length} 个文件夹 · {unseenTotal} 封未读
+        </div>
       </div>
     </aside>
   );
