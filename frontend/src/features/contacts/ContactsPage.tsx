@@ -40,6 +40,17 @@ export default function ContactsPage({ onBack }: ContactsPageProps) {
 
   useEffect(() => { load(page); }, [page, load]);
 
+  // Listen for panel-new event from parent header
+  useEffect(() => {
+    const handler = () => {
+      setForm({ display_name: '', email: '', phone: '', phone_mobile: '', organization: '', notes: '', group_id: '' });
+      setEditing(null);
+      setShowForm(true);
+    };
+    window.addEventListener('panel-new', handler);
+    return () => window.removeEventListener('panel-new', handler);
+  }, []);
+
   const handleSearchChange = (val: string) => {
     setSearchInput(val);
     if (searchTimer.current) clearTimeout(searchTimer.current);

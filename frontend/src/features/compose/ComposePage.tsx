@@ -21,6 +21,14 @@ export default function ComposePage({ onBack }: ComposePageProps) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // Listen for compose-send event from parent header
+  const handleSendRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    const handler = () => handleSendRef.current();
+    window.addEventListener('compose-send', handler);
+    return () => window.removeEventListener('compose-send', handler);
+  }, []);
+
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const composePrefill = useMailStore((s) => s.composePrefill);
   const setComposePrefill = useMailStore((s) => s.setComposePrefill);
@@ -82,6 +90,9 @@ export default function ComposePage({ onBack }: ComposePageProps) {
       setSending(false);
     }
   };
+
+  // Sync ref with latest handleSend
+  handleSendRef.current = handleSend;
 
   return (
     <div className="bg-white flex-1 flex flex-col min-w-0">

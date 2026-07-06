@@ -30,6 +30,13 @@ export default function ApiKeysPanel() {
 
   useEffect(() => { load(); }, []);
 
+  // Listen for panel-new event from parent header
+  useEffect(() => {
+    const handler = () => setShowCreate(true);
+    window.addEventListener('panel-new', handler);
+    return () => window.removeEventListener('panel-new', handler);
+  }, []);
+
   const handleCreate = async () => {
     if (!newName.trim()) { setError('请输入令牌名称'); return; }
     setCreating(true);
