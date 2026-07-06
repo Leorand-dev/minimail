@@ -114,6 +114,469 @@ index.php (入口)
 
 ---
 
+## 五、前端页面设计规范（Roundcube Elastic 风格）
+
+> 本系统前端 UI 设计全面学习 [Roundcube Webmail](https://github.com/roundcube/roundcubemail) 的 **Elastic 皮肤**布局和交互模式，结合 React 现代前端技术栈实现。
+
+### 5.1 布局系统
+
+Roundcube Elastic 的核心布局是**三栏可切换布局**。本系统完全继承此设计：
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  #layout               ┌─── 三栏弹性布局 ───┐           │
+│  ┌────────┬──────────────┬────────────────────────────┐  │
+│  │        │              │                            │  │
+│  │ sidebar│     list     │        content             │  │
+│  │ ~250px │   ~350px     │        (flex)              │  │
+│  │        │              │                            │  │
+│  │文件夹  │  邮件列表    │   邮件预览 / 内容          │  │
+│  │树状列表│  排序表头    │   iframe 嵌入 / 全页       │  │
+│  │未读数  │  发件人/主题 │   发件人信息               │  │
+│  │配额    │  日期/大小   │   附件列表                 │  │
+│  │        │  分页导航    │   正文渲染                 │  │
+│  └────────┴──────────────┴────────────────────────────┘  │
+└─────────────────────────────────────────────────────────┘
+```
+
+**布局容器结构**（直接参考 Roundcube mail.html 源码）：
+
+```html
+<div id="layout">
+  <!-- sidebar: 文件夹列表 -->
+  <div id="layout-sidebar" class="listbox" role="navigation">
+    <div class="header">
+      <span class="header-title username"><!-- 用户名 --></span>
+    </div>
+    <div id="folderlist-content" class="scroller">
+      <!-- mailboxlist treelist listing folderlist -->
+    </div>
+    <div class="footer"><!-- quota widget --></div>
+  </div>
+
+  <!-- list: 邮件列表 -->
+  <div id="layout-list" class="listbox selected">
+    <div id="messagelist-header" class="header">
+      <a class="task-menu-button" />           ← 左上汉堡菜单
+      <span class="header-title" />             ← 当前文件夹名
+      <div class="toolbar menu">               ← select / threads / options 按钮
+      <a class="refresh button" />             ← 刷新
+    </div>
+    <!-- searchbar + searchmenu -->
+    <div id="messagelist-content" class="scroller">
+      <!-- messagelist listing sortheader fixedheader -->
+    </div>
+    <!-- pagenav -->
+  </div>
+
+  <!-- content: 邮件预览 -->
+  <div id="layout-content">
+    <div class="header">
+      <a class="back-list-button" />           ← 返回列表
+      <span class="header-title" />
+      <!-- mail-menu: reply/forward/more -->
+    </div>
+    <div class="iframe-wrapper">
+      <iframe id="messagecontframe" />          ← 邮件正文 iframe
+    </div>
+  </div>
+</div>
+```
+
+### 5.2 响应式断点（完全参考 Roundcube Elastic）
+
+| 断点 | 宽度 | 布局模式 | 可见面板 | 行为 |
+|------|------|---------|---------|------|
+| **phone** | ≤ 480px | 单栏 | 一次显示一个面板 | 返回按钮导航；菜单全屏弹出层 |
+| **small** | 481-768px | 单栏 | 一次显示一个面板 | 类似 phone，菜单侧滑 |
+| **normal** | 769-1200px | 两栏 | 邮件列表 + 预览 | 侧栏默认隐藏，汉堡菜单切换 |
+| **large** | > 1200px | 三栏 | 文件夹 + 列表 + 预览 | 全部可见，可选最小化侧栏 |
+
+**CSS class 绑定**（参考 Roundcube ui.js `layout_metadata()`）：
+```css
+html.layout-large   /* >1200px 三栏全部可见 */
+html.layout-normal  /* 769-1200px 两栏 */
+html.layout-small   /* 481-768px 单栏 */
+html.layout-phone   /* ≤480px 单栏触屏优化 */
+```
+
+布局切换通过 `screen_resize()` 函数控制面板 `hidden` class，不涉及路由跳转。每个面板的可见性通过 Zustand store 追踪：
+
+```typescript
+// src/stores/layout.ts
+interface LayoutStore {
+  visiblePane: 'sidebar' | 'list' | 'content';
+  previousPane: 'sidebar' | 'list' | 'content';
+  screenMode: 'phone' | 'small' | 'normal' | 'large';
+  showSidebar: () => void;
+  showList: () => void;
+  showContent: () => void;
+  back: () => void; // 返回上一个面板
+}
+```
+
+### 5.3 任务切换（顶部导航）
+
+Roundcube 的顶级导航称为 **tasks**，始终固定在页面顶部：
+
+```
+┌─ Logo ────┬─ Mail ─┬─ Contacts ─┬─ Settings ─┬─ Logout ─┐
+            │        │             │
+            │  当前选中任务 (高亮)   │
+```
+
+每个任务对应一套独立的三栏布局。React 中实现为：
+
+```tsx
+<Routes>
+  <Route path="/" element={<AppLayout />}>
+    <Route path="mail/*" element={<MailLayout />}>          ← 三栏
+    <Route path="contacts/*" element={<ContactsLayout />}>  ← 两栏
+    <Route path="settings/*" element={<SettingsLayout />}>  ← 两栏
+  </Route>
+  <Route path="/login" element={<LoginPage />} />
+</Routes>
+```
+
+**任务切换行为**：
+- 点击顶部导航按钮 → 切换整套布局（面板 state 独立）
+- 当前任务在导航栏高亮
+- 每个任务记住自己的上次面板状态
+
+---
+
+### 5.4 页面级 UI 规范
+
+#### 5.4.1 登录页（`/login`）
+
+Roundcube 登录页设计。居中卡片，简洁干净：
+
+```
+┌─────────────────────────────────────┐
+│                                     │
+│             [Logo]                  │
+│            Webmail                  │
+│                                     │
+│  ┌─────────────────────────────┐    │
+│  │  user@example.com          │    │
+│  │  Password                   │    │
+│  │                             │    │
+│  │  ◉ 记住用户名  ◉ 自动登录   │    │
+│  │                             │    │
+│  │  [      登录      ]         │    │
+│  └─────────────────────────────┘    │
+│                                     │
+│  语言: [中文 ▼]                     │
+│                                     │
+│  © 2026 Webmail                     │
+└─────────────────────────────────────┘
+```
+
+**规范**：
+- 单栏居中布局，最大宽度 400px
+- Logo + 产品名在上方
+- 登录框浅色背景卡片（带圆角 + 阴影）
+- 语言选择器在页脚
+- 错误消息红色 Alert 显示在登录框上方
+
+---
+
+#### 5.4.2 邮件主视图（`/mail`）— 核心界面
+
+精确还原 Roundcube Elastic 的三栏布局。这是用户最常用的界面。
+
+**大屏模式（>1200px）**：
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ [☰]  Webmail            [📧 Mail] [👤 Contacts] [⚙ Settings]    │
+├────────────┬──────────────────────┬──────────────────────────────┤
+│  INBOX  230 │  ★ Subject     From     Date    Size │ 发件人: 张三  │
+│  Sent    12 │  ─────────────────────────────────── │  to: me       │
+│  Drafts   3 │  › Q3预算审批… 张伟   07/06  12KB  ★ │               │
+│  Archived   │  › 会议纪要      李芳   07/05  34KB    │ 主题: Q3预算审 │
+│  Spam    5  │  › 周报          王强   07/04  8KB     │               │
+│  Trash      │  › 客户反馈     陈晨   07/03  22KB  📎 │ 正文内容...  │
+│             │  [─────────────── 20/230 ───────────] │               │
+│  已用 2.3G  │  [< 1  2  3 ... 12 >]                │ [附件]        │
+│  总容量 5G  │                                        │               │
+│  [██████    ]│                                        │               │
+├────────────┴──────────────────────┴──────────────────────────────┤
+│  状态栏: 连接正常 | 最后同步: 1分钟前                              │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**关键交互规范**：
+
+| 元素 | 行为 | 参考 Roundcube |
+|------|------|---------------|
+| 文件夹树 | 展开/折叠子目录；点击切换当前文件夹；右键菜单 | `treelist listing folderlist` |
+| 文件夹未读数 | 右侧彩色徽标 | `unreadwrap="%s"` |
+| 邮件列表 | 单击=预览加载；双击=全页打开；Shift多选 | `listing messagelist sortheader` |
+| 排序表头 | 点击切换排序方向；箭头指示器 | |
+| 星标列 | 点击切换；黄色★=已标记 | |
+| 附件列 | 📎图标表示有附件 | |
+| 预览窗格 | 邮件头+正文；iframe隔离渲染 | `#messagecontframe` |
+| 刷新 | 重新同步当前文件夹 | `checkmail` 命令 |
+| 搜索 | 立即搜索；展开高级面板 | `#mailsearchform` + `#searchmenu` |
+| 分页 | 页码+每页条数 | `pagenav` |
+
+**空状态**：
+- 文件夹为空: "收件箱中没有邮件"
+- 搜索无结果: "未找到匹配的邮件"
+- 未选择邮件时预览窗格: 显示引导文字
+
+**高级搜索面板**（展开式，参考 Roundcube `#searchmenu`）：
+```
+┌────── 搜索选项 ──────┐
+│ ☑ 主题  ☑ 发件人     │
+│ ☐ 收件人  ☑ 正文     │
+│                      │
+│ 类型: [所有邮件 ▼]   │
+│ 日期: [一周内 ▼]    │
+│ 范围: [当前文件夹 ▼] │
+│                      │
+│     [   搜索   ]      │
+└──────────────────────┘
+```
+
+**React 组件树**：
+```tsx
+<MailLayout>
+  <FolderSidebar>
+    <FolderTree>
+      <FolderNode name="INBOX" unread={230} />
+      <FolderNode name="Sent" />
+      <FolderNode name="Drafts" />
+      <FolderNode name="Spam" unread={5} />
+      <FolderNode name="Trash" />
+    </FolderTree>
+    <QuotaBar used={2.3} total={5} unit="GB" />
+  </FolderSidebar>
+
+  <MessageList>
+    <ListHeader columns={['flag','subject','from','date','size']} />
+    <SearchBar />
+    <VirtualList itemHeight={48}>
+      <MessageRow subject="..." from="..." date="..." />
+    </VirtualList>
+    <Pagination page={1} total={230} />
+  </MessageList>
+
+  <PreviewPane message={selectedMessage}>
+    <MessageHeaders />
+    <AttachmentList />
+    <MessageBody />
+    {!selectedMessage && <EmptyState />}
+  </PreviewPane>
+</MailLayout>
+```
+
+---
+
+#### 5.4.3 邮件阅读页（全屏视图）
+
+双击邮件列表进入全屏阅读：
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  ← 返回  [✉] [↩] [↩全部] [↪] [🗑] [✦] [⋯]  │
+├──────────────────────────────────────────────────────────────┤
+│  发件人: 张伟 <zhangwei@company.com>     SPF ✅ DKIM ✅       │
+│  收件人: me [展开]   日期: 2026-07-06 14:30                  │
+│  主题: Q3 预算审批方案                                       │
+│                                                              │
+│  张总您好,                                                   │
+│  附件是 Q3 预算审批方案，请查收。                             │
+│  主要变更:                                                   │
+│  - 研发预算增加 15%                                          │
+│                                                              │
+│  此致                                                        │
+│  张伟                                                        │
+│                                                              │
+│  附件 (2): [📎 预算方案_v3.xlsx 245KB] [📎 会议纪要.pdf]    │
+│                                          [全部下载 ▼]         │
+└──────────────────────────────────────────────────────────────┘
+```
+
+---
+
+#### 5.4.4 撰写邮件（`/compose`）
+
+两栏布局，左侧编辑器 + 右侧附件选项栏：
+
+```
+┌──────────────────────────────────┬──────────────────────────────┐
+│  [← 返回] [✉ 发送] [🗑 放弃]   │  ┌── 附件 ────────────────┐ │
+├──────────────────────────────────┤  │ [添加附件]              │ │
+│  发件人: [me@company.com ▼]     │  │ 📎 预算_v3 245KB [✕] │ │
+│  收件人: [zhang@company.com]    │  └────────────────────────┘ │
+│  Cc:    [___]                   │  ┌── 选项 ────────────────┐ │
+│  Bcc:   [___]                   │  │ 优先级: [普通 ▼]       │ │
+│  主题:  [Re: Q3 预算审批方案]    │  │ ☐ 请求阅读回执         │ │
+│                                  │  │ ☐ 保存已发送           │ │
+│  ┌─ 编辑器 (TipTap) ──────────┐ │  └────────────────────────┘ │
+│  │  B I U S 字体 ▼  字号 ▼   │ │                              │
+│  │────────────────────────────│ │                              │
+│  │  张总您好,                 │ │                              │
+│  │                            │ │                              │
+│  │  > 附件是Q3预算审批方案...  │ │                              │
+│  └────────────────────────────┘ │                              │
+└──────────────────────────────────┴──────────────────────────────┘
+```
+
+**交互要点**：
+- 发件人下拉 = 多身份切换
+- 收件人自动完成（通讯录/历史）
+- 附件拖拽上传 + 进度条
+- 草稿自动保存（60s + 关闭时）
+- 引用格式 > 标记
+- 右侧面板小屏时隐藏
+
+---
+
+#### 5.4.5 通讯录（`/contacts`）
+
+两栏布局（目录+列表 / 详情）：
+
+```
+├──────────────┬───────────────────────────────────────────────┤
+│ [新建联系人] │  ┌── 联系人详情 ─────────────────────────┐   │
+│              │  │  [👤] 张三    zhang@company.com       │   │
+│  [个人地址簿] │  │  手机: +86 138 0000 1234            │   │
+│   └─ 同事     │  │  公司: 有限公司 / 研发部            │   │
+│   └─ 家人     │  │                                       │   │
+│  [公司目录]   │  │  [编辑] [删除] [发送邮件]             │   │
+│  [LDAP 查询]  │  └───────────────────────────────────────┘   │
+│              │                                                │
+│  搜索: [   ] │  张三  zhang@company.com                       │
+│              │  张伟  zhangwei@company.com                     │
+│  共 35 个联系人│                                                │
+└──────────────┴───────────────────────────────────────────────┘
+```
+
+---
+
+#### 5.4.6 设置页（`/settings`）
+
+两栏布局（左侧分类，右侧配置表单）：
+
+```
+├───────────┬─────────────────────────────────────────────────┤
+│  [用户界面]│  ┌── 用户界面 ───────────────────────────┐    │
+│  [查看邮件]│  │  每页显示: [50 ▼]  排序: [日期 ▼]    │    │
+│  [撰写]    │  │  布局: [宽屏三栏 ▼]  语言: [中文 ▼]  │    │
+│  [通讯录]  │  │  主题: [☾ 暗色  ☀ 亮色]             │    │
+│  [文件夹]  │  │                                        │    │
+│  [身份]    │  │         [保存]                         │    │
+│  [过滤规则]│  └────────────────────────────────────────┘    │
+│  [Webhooks]│                                                │
+└───────────┴─────────────────────────────────────────────────┘
+```
+
+---
+
+#### 5.4.7 AI Agent 对话面板（新增）
+
+内嵌在邮件主界面右侧的浮动面板：
+
+```
+┌───────── 主界面 ─────────┬─── AI 助手 ────┐
+│                          │  [AI] 🤖      │
+│   [文件夹] [邮件列表]    │               │
+│                          │  AI: 找到了3封│
+│                          │  相关邮件...  │
+│                          │               │
+│                          │  我: 帮我看一 │
+│                          │  下附件内容   │
+│                          │               │
+│                          │  [输入消息...] │
+│                          │  [发送]       │
+├──────────────────────────┴───────────────┤
+│  状态栏                                   │
+└──────────────────────────────────────────┘
+```
+
+- 浮动面板，覆盖在内容区上方
+- 宽度 380px，全视口高度
+- 支持 Markdown 渲染、邮件对象引用
+- 操作确认按钮在对话气泡内
+
+### 5.5 设计 Token（Tailwind CSS 自定义主题）
+
+```ts
+// tailwind.config.ts
+export default {
+  theme: {
+    extend: {
+      colors: {
+        primary: {    // Roundcube 蓝 #066da5
+          DEFAULT: '#066da5',
+          hover: '#05588a',
+          light: '#e8f4fd',
+        },
+        sidebar: {
+          bg: '#f5f6f7',
+          hover: '#e9ecef',
+          active: '#d0e2f3',
+          text: '#333',
+          unread: '#066da5',
+        },
+        list: {
+          bg: '#fff',
+          row: '#fff',
+          rowAlt: '#fafafa',
+          rowHover: '#edf3ff',
+          rowSelected: '#c7dbff',
+          border: '#e2e5e9',
+        },
+      },
+      spacing: {
+        'sidebar': '250px',
+        'list-md': '350px',
+        'list-lg': '400px',
+        'agent-panel': '380px',
+      },
+      boxShadow: {
+        'card': '0 1px 3px rgba(0,0,0,0.08)',
+        'popover': '0 4px 12px rgba(0,0,0,0.15)',
+      },
+    }
+  }
+}
+```
+
+### 5.6 UI 组件对应表
+
+| Roundcube 元素 | 本项目 React 组件 | 说明 |
+|---------------|-------------------|------|
+| `#layout-sidebar` | `<FolderSidebar>` | 文件夹树 + 配额 |
+| `treelist listing folderlist` | `<FolderTree>` + `<FolderNode>` | 树形可折叠文件夹 |
+| `#messagelist` | `<MessageList>` + `<VirtualList>` | 虚拟滚动邮件列表 |
+| `sortheader` | `<ListHeader>` | 可点击排序表头 |
+| `#mailsearchform + #searchmenu` | `<SearchBar>` + `<AdvancedSearch>` | 展开式高级搜索 |
+| `#pagenav` | `<Pagination>` | 分页控件 |
+| `#messagecontframe` | `<MessageBody>` / `<PreviewPane>` | 邮件正文渲染 |
+| `addresslist listing` | `<ContactList>` | 联系人列表 |
+| `#directorylist` | `<ContactGroupSidebar>` | 通讯录分组 |
+| `task-menu` | `<TopNav>` | 任务切换导航 |
+| `.popupmenu` | `<DropdownMenu>` + `<Popover>` | 弹出菜单 |
+| `quotadisplay` | `<QuotaBar>` | 邮箱用量进度条 |
+
+### 5.7 从 Roundcube 迁移到本项目的差异
+
+| 方面 | Roundcube (PHP+jQuery) | 本项目 (React) |
+|------|----------------------|---------------|
+| 布局切换 | 直接 DOM 操作 | Zustand layout store |
+| 邮件列表 | jQuery 插件操作 `<table>` | `<VirtualList>` 只渲染可见行 |
+| 邮件预览 | `<iframe>` 加载 PHP 页面 | 可选 iframe 或组件内渲染 |
+| 搜索 | 服务端搜索 + 客户端刷新 | API 搜索 + 即时过滤 |
+| 拖拽 | jQuery UI | `dnd-kit` |
+| 主题 | LESS 变量 | Tailwind CSS + `dark:` class |
+| 国际化 | PHP 翻译 | `react-intl` |
+| 模板 | `roundcube:object` 标签 | JSX 组件 |
+
+---
+
 ## 三、完整开发计划 (Phase 0-9)
 
 ### Phase 0 — 项目基建 (Week 1)
