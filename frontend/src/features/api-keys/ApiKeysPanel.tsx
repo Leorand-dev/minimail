@@ -97,6 +97,29 @@ export default function ApiKeysPanel() {
             </p>
           </div>
 
+          {/* Agent 调用示例 */}
+          <div className="mb-6 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
+            <label className="block text-xs font-medium text-gray-500 mb-1">🤖 Agent 调用示例</label>
+            <div className="flex gap-2">
+              <code className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded text-sm font-mono select-all whitespace-pre-wrap break-all">
+{`curl -H "Authorization: Bearer &lt;你的令牌&gt;" \\
+  ${window.location.origin}/api/mail/folders`}
+              </code>
+              <button
+                onClick={() => {
+                  try { navigator.clipboard.writeText(`curl -H "Authorization: Bearer <你的令牌>" \\\n  ${window.location.origin}/api/mail/folders`); }
+                  catch { /* ignore */ }
+                }}
+                className="px-3 py-2 text-xs text-gray-500 border border-gray-200 rounded hover:bg-white hover:text-[#066da5] self-start"
+              >
+                复制
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-gray-400">
+              将 <code className="text-xs bg-gray-100 px-1 rounded">&lt;你的令牌&gt;</code> 替换为上方创建的 API 密钥即可调用
+            </p>
+          </div>
+
           {/* Error */}
           {error && (
             <div className="mb-4 px-4 py-2 bg-red-50 border border-red-200 rounded text-red-600 text-sm">
