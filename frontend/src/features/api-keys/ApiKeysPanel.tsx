@@ -102,7 +102,7 @@ export default function ApiKeysPanel() {
             <label className="block text-xs font-medium text-gray-500 mb-1">🤖 Agent 调用示例</label>
             <div className="flex gap-2">
               <code className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded text-sm font-mono select-all whitespace-pre-wrap break-all">
-{`curl -H "Authorization: Bearer &lt;你的令牌&gt;" \\
+{`curl -H "Authorization: Bearer <你的令牌>" \\
   ${window.location.origin}/api/mail/folders`}
               </code>
               <button
