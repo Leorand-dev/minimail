@@ -20,7 +20,7 @@ export interface ComposePrefill {
 interface MailState {
   folders: Folder[];
   accountFolders: AccountFolderGroup[];
-  currentAccount: string | null; // null = unified inbox
+  currentAccount: string | null;
   currentFolder: string;
   messages: MessageSummary[];
   totalMessages: number;
@@ -28,6 +28,7 @@ interface MailState {
   totalPages: number;
   loading: boolean;
   error: string | null;
+  readUids: Set<number>;
   searchQuery: string;
   searchDateFrom: string;
   searchDateTo: string;
@@ -49,6 +50,8 @@ interface MailState {
   setPage: (p: number) => void;
   setLoading: (v: boolean) => void;
   setError: (e: string | null) => void;
+  setReadUids: (uids: Set<number>) => void;
+  addReadUid: (uid: number) => void;
   setSearchQuery: (q: string) => void;
   setSearchDateFrom: (d: string) => void;
   setSearchDateTo: (d: string) => void;
@@ -62,19 +65,7 @@ interface MailState {
   setComposePrefill: (p: ComposePrefill | null) => void;
 }
 
-export const useMailStore = create<MailState>((set) => {
-  // 清除持久化可能残留的 loading 状态
-  try {
-    const raw = localStorage.getItem('webmail-mail-store');
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed?.state?.loading === true) {
-        parsed.state.loading = false;
-        localStorage.setItem('webmail-mail-store', JSON.stringify(parsed));
-      }
-    }
-  } catch {}
-
+export const useMailStore = create<MailState>()((set) => {
   return {
     folders: [],
     accountFolders: [],
@@ -86,6 +77,7 @@ export const useMailStore = create<MailState>((set) => {
     totalPages: 1,
     loading: false,
     error: null,
+    readUids: new Set<number>(),
     searchQuery: '',
     searchDateFrom: '',
     searchDateTo: '',
@@ -108,6 +100,12 @@ export const useMailStore = create<MailState>((set) => {
     setPage: (page) => set({ page }),
     setLoading: (loading) => set({ loading }),
     setError: (error) => set({ error }),
+    setReadUids: (readUids) => set({ readUids }),
+    addReadUid: (uid) => set((s) => {
+      const next = new Set(s.readUids);
+      next.add(uid);
+      return { readUids: next };
+    }),
     setSearchQuery: (searchQuery) => set({ searchQuery, page: 1 }),
     setSearchDateFrom: (searchDateFrom) => set({ searchDateFrom, page: 1 }),
     setSearchDateTo: (searchDateTo) => set({ searchDateTo, page: 1 }),

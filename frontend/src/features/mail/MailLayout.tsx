@@ -48,6 +48,7 @@ export default function MailLayout() {
         const folderMsgs = res.data.messages?.messages || [];
         const filtered = folderMsgs;
         setMessages(filtered, filtered.length, 1, 1);
+        applyReadUids();
         setLoading(false);
         demoLoaded = true;
       } catch { setLoading(false); }
@@ -71,6 +72,7 @@ export default function MailLayout() {
             setFolders(res.data.folders);
             const folderMsgs = res.data.messages?.messages || [];
             setMessages(folderMsgs, folderMsgs.length, 1, 1);
+            applyReadUids();
           } catch {}
         }
         skipImapRef.current = true;
@@ -82,6 +84,20 @@ export default function MailLayout() {
   // 跳过 mount 时的首次执行 (init 已处理)
   const mountedRef = useRef(false);
   const lastKeyRef = useRef('');
+
+  // 将本地已读状态合并到当前消息列表
+  const applyReadUids = () => {
+    const s = useMailStore.getState();
+    if (s.readUids.size === 0) return;
+    const patched = s.messages.map((m) =>
+      s.readUids.has(m.uid) && !m.is_read
+        ? { ...m, is_read: true, flags: [...(m.flags || []), '\\Seen'] as string[] }
+        : m
+    );
+    if (patched.some((m, i) => m !== s.messages[i])) {
+      s.setMessages(patched, s.totalMessages, s.page, s.totalPages);
+    }
+  };
 
   const loadMessages = useCallback(async () => {
     const store = useMailStore.getState();
@@ -109,6 +125,7 @@ export default function MailLayout() {
               return true;
             });
         setMessages(filtered, filtered.length, 1, 1);
+        applyReadUids();
       } catch { setError('加载失败'); }
       finally { setLoading(false); }
       return;
@@ -124,6 +141,7 @@ export default function MailLayout() {
           })
         : await fetchMessages(currentFolder, page, 50);
       setMessages(res.messages, res.total, res.page, res.total_pages);
+      applyReadUids();
     } catch {
       // IMAP 失败 — 降级到 demo
       skipImapRef.current = true;
@@ -131,6 +149,7 @@ export default function MailLayout() {
         const res = await api.get('/mail/demo');
         const folderMsgs = (res.data.messages?.messages || []);
         setMessages(folderMsgs, folderMsgs.length, 1, 1);
+        applyReadUids();
       } catch { setError('加载邮件失败'); }
     }
     finally { setLoading(false); }

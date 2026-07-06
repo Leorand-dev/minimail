@@ -64,6 +64,7 @@ export default function FolderSidebar({ className = '', onSelectFolder }: Folder
   const setActiveView = useMailStore((s) => s.setActiveView);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const unseenTotal = folders.reduce((sum, f) => sum + (f.unseen || 0), 0);
+  const unifiedUnseen = accountFolders.reduce((sum, g) => sum + g.folders.reduce((s2, f) => s2 + (f.unseen || 0), 0), 0);
 
   const [imapStatus, setImapStatus] = useState<ImapStatus | null>(null);
   const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
@@ -169,7 +170,7 @@ export default function FolderSidebar({ className = '', onSelectFolder }: Folder
       {/* ═══ 功能导航 ═══ */}
       <div className="px-3 pb-1">
         <div className="flex flex-col gap-0.5">
-          <NavItem icon="📥" label="统一收件箱" active={activeView === 'mail' && currentAccount === null} onClick={() => {
+          <NavItem icon="📥" label="统一收件箱" count={unifiedUnseen} active={activeView === 'mail' && currentAccount === null} onClick={() => {
             setCurrentAccount(null);
             setCurrentFolder('INBOX');
             setActiveView('mail');
@@ -271,7 +272,7 @@ export default function FolderSidebar({ className = '', onSelectFolder }: Folder
 }
 
 /** 导航项目组件 */
-function NavItem({ icon, label, active, onClick }: { icon: string; label: string; active?: boolean; onClick: () => void }) {
+function NavItem({ icon, label, count, active, onClick }: { icon: string; label: string; count?: number; active?: boolean; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
@@ -282,7 +283,12 @@ function NavItem({ icon, label, active, onClick }: { icon: string; label: string
       }`}
     >
       <span className="flex-shrink-0">{icon}</span>
-      <span>{label}</span>
+      <span className="flex-1 truncate">{label}</span>
+      {count !== undefined && count > 0 && (
+        <span className="flex-shrink-0 bg-[#066da5] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+          {count > 99 ? '99+' : count}
+        </span>
+      )}
     </button>
   );
 }
