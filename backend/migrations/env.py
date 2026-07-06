@@ -1,0 +1,72 @@
+"""
+Alembic 迁移环境配置 (async)
+"""
+
+import sys
+from pathlib import Path
+from logging.config import fileConfig
+
+from alembic import context
+from sqlalchemy import engine_from_config, pool
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+
+# 将项目根目录加入 sys.path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from app.config import settings  # noqa: E402
+from app.database import Base  # noqa: E402
+
+# Alembic Config
+config = context.config
+
+# 日志
+if config.config_file_name is not None:
+    fileConfig(config.config_file_name)
+
+# 元数据
+target_metadata = Base.metadata
+
+
+def run_migrations_offline() -> None:
+    """离线模式: 生成 SQL 脚本而不连接数据库."""
+    url = settings.database_url
+    context.configure(
+        url=url,
+        target_metadata=target_metadata,
+        literal_binds=True,
+        dialect_opts={"paramstyle": "named"},
+        compare_type=True,
+    )
+    with context.begin_transaction():
+        context.run_migrations()
+
+
+def run_migrations_online() -> None:
+    """在线模式: 连接数据库执行迁移."""
+    connectable = create_async_engine(
+        settings.database_url,
+        poolclass=pool.NullPool,
+    )
+
+    async def run_async():
+        async with connectable.connect() as connection:
+            await connection.run_sync(do_run_migrations)
+        await connectable.dispose()
+
+    def do_run_migrations(connection):
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            compare_type=True,
+        )
+        with context.begin_transaction():
+            context.run_migrations()
+
+    import asyncio
+    asyncio.run(run_async())
+
+
+if context.is_offline_mode():
+    run_migrations_offline()
+else:
+    run_migrations_online()

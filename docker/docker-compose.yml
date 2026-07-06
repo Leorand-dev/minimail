@@ -1,6 +1,8 @@
 services:
   postgres:
     image: pgvector/pgvector:pg16
+    container_name: webmail-db
+    restart: unless-stopped
     environment:
       POSTGRES_DB: webmail
       POSTGRES_USER: webmail
@@ -18,6 +20,8 @@ services:
 
   redis:
     image: redis:7-alpine
+    container_name: webmail-redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
@@ -32,14 +36,16 @@ services:
     build:
       context: ../backend
       dockerfile: Dockerfile
+    container_name: webmail-backend
+    restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql+asyncpg://webmail:webmail_dev@postgres:5432/webmail
       REDIS_URL: redis://redis:6379/0
-      SECRET_KEY: dev-secret-key-change-in-production
-    volumes:
-      - ../backend:/app
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
+      CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:5173","http://localhost:3000"]}
+      DEBUG: "false"
     depends_on:
       postgres:
         condition: service_healthy
@@ -50,10 +56,10 @@ services:
     build:
       context: ../frontend
       dockerfile: Dockerfile
+    container_name: webmail-frontend
+    restart: unless-stopped
     ports:
       - "3000:80"
-    volumes:
-      - ../frontend:/app
     depends_on:
       - backend
 

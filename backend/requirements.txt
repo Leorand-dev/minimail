@@ -3,13 +3,15 @@ uvicorn[standard]>=0.34
 sqlalchemy[asyncio]>=2.0,<3
 asyncpg>=0.30
 alembic>=1.14
-pydantic>=2.10,<3
+pydantic[email]>=2.10,<3
 pydantic-settings>=2.7
 redis>=5.2
 aiosmtplib>=3.0
-mailparser>=4.1
+# MIME 解析暂用 Python 标准库 email, 后续可按需添加 mailparser
 python-jose[cryptography]>=3.3
 passlib[bcrypt]>=1.7
+bcrypt<4.1  # passlib 兼容性
+aioimaplib>=1.1
 python-multipart>=0.0.18
 httpx>=0.28
 # AI / Agent

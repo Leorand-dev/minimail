@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #066da5;
+  --color-primary-hover: #05588a;
+  --color-primary-light: #e8f4fd;
+  --color-sidebar-bg: #f5f6f7;
+  --color-sidebar-hover: #e9ecef;
+  --color-sidebar-active: #d0e2f3;
+  --color-sidebar-text: #333;
+  --color-list-bg: #fff;
+  --color-list-row: #fff;
+  --color-list-row-alt: #fafafa;
+  --color-list-row-hover: #edf3ff;
+  --color-list-row-selected: #c7dbff;
+  --color-list-border: #e2e5e9;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
