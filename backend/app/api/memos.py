@@ -10,6 +10,9 @@ Minimail — 笔记库 Note API
   - POST   /api/notes/{id}/pin        切换置顶
   - POST   /api/notes/{id}/restore    恢复归档
   - GET    /api/notes/tags            用户标签列表
+  - POST   /api/notes/tags            创建标签
+  - PUT    /api/notes/tags/{name}     重命名标签
+  - DELETE /api/notes/tags/{name}     删除标签 (从所有笔记中移除)
   - GET    /api/notes/search          全文搜索
 
 参考: https://github.com/usememos/memos
@@ -22,6 +25,7 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+import sqlalchemy
 from sqlalchemy import func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -32,6 +36,8 @@ from app.schemas.note import (
     NoteCreate,
     NoteListResponse,
     NoteResponse,
+    NoteTagCreate,
+    NoteTagRename,
     NoteTagResponse,
     NoteUpdate,
 )
@@ -177,6 +183,121 @@ async def list_tags(
     )
     tags = result.scalars().all()
     return [NoteTagResponse(name=t.name, note_count=t.note_count) for t in tags]
+
+
+@router.post("/tags", response_model=NoteTagResponse, status_code=201)
+async def create_tag(
+    body: NoteTagCreate,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """创建标签 (如果已存在则返回现有)."""
+    result = await db.execute(
+        select(NoteTagModel).where(
+            NoteTagModel.name == body.name.strip(),
+            NoteTagModel.user_id == user.id,
+        )
+    )
+    existing = result.scalar_one_or_none()
+    if existing:
+        return NoteTagResponse(name=existing.name, note_count=existing.note_count)
+
+    tag = NoteTagModel(
+        name=body.name.strip(),
+        user_id=user.id,
+        note_count=0,
+    )
+    db.add(tag)
+    await db.flush()
+    await db.refresh(tag)
+    return NoteTagResponse(name=tag.name, note_count=tag.note_count)
+
+
+@router.put("/tags/{tag_name:path}", response_model=NoteTagResponse)
+async def rename_tag(
+    tag_name: str,
+    body: NoteTagRename,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """重命名标签 (更新所有笔记中的标签名称)."""
+    # 检查源标签是否存在
+    result = await db.execute(
+        select(NoteTagModel).where(
+            NoteTagModel.name == tag_name,
+            NoteTagModel.user_id == user.id,
+        )
+    )
+    tag_row = result.scalar_one_or_none()
+    if not tag_row:
+        raise HTTPException(status_code=404, detail="标签不存在")
+
+    new_name = body.new_name.strip()
+    if new_name == tag_name:
+        return NoteTagResponse(name=tag_row.name, note_count=tag_row.note_count)
+
+    # 更新所有笔记: tags 数组中替换
+    await db.execute(
+        sqlalchemy.update(NoteModel)
+        .where(
+            NoteModel.user_id == user.id,
+            NoteModel.tags.any(tag_name),
+        )
+        .values(
+            tags=func.array_replace(NoteModel.tags, tag_name, new_name)
+        )
+    )
+
+    # 更新聚合表
+    # 检查目标标签是否已存在
+    result2 = await db.execute(
+        select(NoteTagModel).where(
+            NoteTagModel.name == new_name,
+            NoteTagModel.user_id == user.id,
+        )
+    )
+    target = result2.scalar_one_or_none()
+    if target:
+        # 合并: 计数相加, 删除源
+        target.note_count += tag_row.note_count
+        await db.delete(tag_row)
+        await db.flush()
+        return NoteTagResponse(name=target.name, note_count=target.note_count)
+    else:
+        # 直接重命名
+        tag_row.name = new_name
+        await db.flush()
+        await db.refresh(tag_row)
+        return NoteTagResponse(name=tag_row.name, note_count=tag_row.note_count)
+
+
+@router.delete("/tags/{tag_name:path}", status_code=204)
+async def delete_tag(
+    tag_name: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """删除标签 (从所有笔记中移除)."""
+    # 从所有笔记中移除该标签
+    await db.execute(
+        sqlalchemy.update(NoteModel)
+        .where(
+            NoteModel.user_id == user.id,
+            NoteModel.tags.any(tag_name),
+        )
+        .values(
+            tags=func.array_remove(NoteModel.tags, tag_name)
+        )
+    )
+
+    # 删除聚合记录
+    await db.execute(
+        sqlalchemy.delete(NoteTagModel).where(
+            NoteTagModel.name == tag_name,
+            NoteTagModel.user_id == user.id,
+        )
+    )
+    await db.flush()
 
 
 # ─── 全文搜索 ───

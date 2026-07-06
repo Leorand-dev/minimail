@@ -63,6 +63,18 @@ class NoteTagResponse(BaseModel):
     note_count: int = 0
 
 
+class NoteTagCreate(BaseModel):
+    """创建标签."""
+
+    name: str = Field(..., min_length=1, max_length=64)
+
+
+class NoteTagRename(BaseModel):
+    """重命名标签."""
+
+    new_name: str = Field(..., min_length=1, max_length=64)
+
+
 class NoteSearchQuery(BaseModel):
     """搜索参数 (GET query)."""
 

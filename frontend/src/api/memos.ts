@@ -102,6 +102,23 @@ export async function fetchTags(): Promise<NoteTag[]> {
   return res.data;
 }
 
+/** 创建标签 */
+export async function createTag(name: string): Promise<NoteTag> {
+  const res = await api.post('/notes/tags', { name });
+  return res.data;
+}
+
+/** 重命名标签 */
+export async function renameTag(oldName: string, newName: string): Promise<NoteTag> {
+  const res = await api.put(`/notes/tags/${encodeURIComponent(oldName)}`, { new_name: newName });
+  return res.data;
+}
+
+/** 删除标签 */
+export async function deleteTag(name: string): Promise<void> {
+  await api.delete(`/notes/tags/${encodeURIComponent(name)}`);
+}
+
 /** 全文搜索 */
 export async function searchNotes(params: {
   q?: string;

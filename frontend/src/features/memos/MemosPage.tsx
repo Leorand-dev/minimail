@@ -28,6 +28,7 @@ import type { Note } from '@/api/memos';
 import { useNotesStore } from '@/stores/memos';
 import MemoList from './MemoList';
 import MemoEditor from './MemoEditor';
+import TagsManager from './TagsManager';
 
 export default function MemosPage() {
   const {
@@ -224,9 +225,11 @@ export default function MemosPage() {
         </div>
         )}
 
-        {/* 右侧: 列表 / 编辑器 */}
+        {/* 右侧: 列表 / 标签管理 / 编辑器 */}
         <div className="flex-1 overflow-y-auto">
-          {showEditor ? (
+          {noteView === 'tags' ? (
+            <TagsManager tags={tags} onRefresh={() => { loadNotes(); loadTags(); }} />
+          ) : showEditor ? (
             <div className="p-4 max-w-3xl">
               <MemoEditor
                 note={editingNote}
