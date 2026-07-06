@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMailStore } from '@/stores/mail';
 import api from '@/api/client';
 import AutocompleteInput from './AutocompleteInput';
+import RichTextEditor from './RichTextEditor';
 
 interface ComposePageProps {
   onBack?: () => void;
@@ -17,6 +18,7 @@ export default function ComposePage({ onBack }: ComposePageProps) {
   const [bcc, setBcc] = useState('');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
+  const [htmlBody, setHtmlBody] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -75,7 +77,8 @@ export default function ComposePage({ onBack }: ComposePageProps) {
         cc: ccList.length ? ccList : undefined,
         bcc: bccList.length ? bccList : undefined,
         subject,
-        text_body: body,
+        text_body: body || htmlBody.replace(/<[^>]*>/g, '').trim() || ' ',
+        html_body: htmlBody || undefined,
       };
       if (from.trim()) payload.from_addr = from.trim();
 
@@ -180,11 +183,10 @@ export default function ComposePage({ onBack }: ComposePageProps) {
         </div>
 
         {/* 正文 */}
-        <textarea
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
+        <RichTextEditor
+          value={htmlBody}
+          onChange={(html, text) => { setHtmlBody(html); setBody(text); }}
           placeholder="在此输入邮件内容..."
-          className="w-full flex-1 px-4 py-3 text-sm border-0 outline-none resize-none min-h-[300px]"
         />
       </div>
     </div>
