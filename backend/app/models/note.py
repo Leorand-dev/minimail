@@ -13,10 +13,13 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Optional
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func, Index
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from pgvector.sqlalchemy import Vector
 
 from app.database import Base
 
@@ -57,6 +60,11 @@ class Note(Base):
     user = relationship("User", back_populates="notes")
     reactions: Mapped[list["NoteReaction"]] = relationship(
         back_populates="note", cascade="all, delete-orphan"
+    )
+
+    # ── 语义搜索 (pgvector) ──
+    embedding: Mapped[Optional[list[float]]] = mapped_column(
+        Vector(1536), nullable=True
     )
 
     # ── 全文搜索索引 (GIN on tsvector) ──

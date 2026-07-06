@@ -130,3 +130,27 @@ export async function searchNotes(params: {
   const res = await api.get('/notes/search', { params });
   return res.data;
 }
+
+/** 语义搜索 — 传入外部 AI 计算的 embedding, 返回最相似笔记 */
+export async function semanticSearch(params: {
+  embedding: number[];
+  query?: string;
+  tag?: string;
+  visibility?: string;
+  top_k?: number;
+}): Promise<{ results: Array<{ note: Note; score: number }> }> {
+  const res = await api.post('/notes/search/semantic', params);
+  return res.data;
+}
+
+/** 从上下文创建笔记 — Agent 专用 */
+export async function createNoteFromContext(params: {
+  content: string;
+  tags?: string[];
+  visibility?: string;
+  source?: string;
+  embedding?: number[];
+}): Promise<Note> {
+  const res = await api.post('/notes/from-context', params);
+  return res.data;
+}

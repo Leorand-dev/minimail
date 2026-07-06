@@ -75,6 +75,43 @@ class NoteTagRename(BaseModel):
     new_name: str = Field(..., min_length=1, max_length=64)
 
 
+class SemanticSearchRequest(BaseModel):
+    """语义搜索请求 — 外部 AI Agent 传入 query + embedding."""
+
+    query: str = Field(default="", description="搜索关键词 (用于记录)")
+    embedding: list[float] = Field(
+        ..., min_length=256, max_length=4096, description="外部 AI 计算的 query embedding 向量"
+    )
+    top_k: int = Field(default=10, ge=1, le=50)
+    tag: str = Field(default="")
+    visibility: str = Field(default="")
+
+
+class SemanticSearchItem(BaseModel):
+    """语义搜索结果条目."""
+
+    note: NoteResponse
+    score: float
+
+
+class SemanticSearchResponse(BaseModel):
+    """语义搜索结果."""
+
+    results: list[SemanticSearchItem]
+
+
+class FromContextRequest(BaseModel):
+    """从上下文创建笔记 — Agent 专用."""
+
+    content: str = Field(..., min_length=1, max_length=65536)
+    tags: list[str] = Field(default_factory=list, max_length=20)
+    visibility: str = Field(default="private")
+    source: str = Field(default="", description="来源描述 (如 email / chat / agent)")
+    embedding: list[float] | None = Field(
+        default=None, description="可选的 embedding 向量"
+    )
+
+
 class NoteSearchQuery(BaseModel):
     """搜索参数 (GET query)."""
 

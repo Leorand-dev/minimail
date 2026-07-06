@@ -14,6 +14,8 @@ Minimail — 笔记库 Note API
   - PUT    /api/notes/tags/{name}     重命名标签
   - DELETE /api/notes/tags/{name}     删除标签 (从所有笔记中移除)
   - GET    /api/notes/search          全文搜索
+  - POST   /api/notes/search/semantic 语义搜索 (外部 AI 传入 embedding)
+  - POST   /api/notes/from-context    从外部上下文创建笔记 (Agent 专用)
 
 参考: https://github.com/usememos/memos
 """
@@ -33,6 +35,7 @@ from sqlalchemy.future import select
 from app.database import get_db
 from app.models.user import User
 from app.schemas.note import (
+    FromContextRequest,
     NoteCreate,
     NoteListResponse,
     NoteResponse,
@@ -40,6 +43,9 @@ from app.schemas.note import (
     NoteTagRename,
     NoteTagResponse,
     NoteUpdate,
+    SemanticSearchItem,
+    SemanticSearchRequest,
+    SemanticSearchResponse,
 )
 from app.services.auth import get_current_user
 
@@ -476,6 +482,86 @@ async def restore_note(
     note.row_status = "active"
     await db.flush()
     await db.refresh(note)
+    return NoteResponse.model_validate(note)
+
+
+@router.post("/search/semantic", response_model=SemanticSearchResponse)
+async def semantic_search(
+    body: SemanticSearchRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """语义搜索 — 外部 AI Agent 传入 embedding 向量, 返回最相似笔记.
+
+    外部 AI 使用自身的 embedding 模型计算 query 向量后传入,
+    Minimail 仅作为向量存储和检索后端, 不做 embedding 计算.
+    """
+    # 构建基础查询
+    query = select(
+        NoteModel,
+        NoteModel.embedding.cosine_distance(body.embedding).label("score"),
+    ).where(
+        NoteModel.user_id == user.id,
+        NoteModel.row_status == "active",
+        NoteModel.embedding.isnot(None),
+    )
+
+    # 标签过滤
+    if body.tag:
+        query = query.where(NoteModel.tags.any(body.tag))
+
+    # 可见性过滤
+    if body.visibility in ("private", "public"):
+        query = query.where(NoteModel.visibility == body.visibility)
+
+    query = query.order_by(sqlalchemy.text("score ASC")).limit(body.top_k)
+
+    result = await db.execute(query)
+    rows = result.all()
+
+    items = [
+        SemanticSearchItem(
+            note=NoteResponse.model_validate(row.NoteModel),
+            score=float(round((1 - row.score) * 100, 2)),
+        )
+        for row in rows
+    ]
+
+    return SemanticSearchResponse(results=items)
+
+
+@router.post("/from-context", response_model=NoteResponse, status_code=201)
+async def create_from_context(
+    body: FromContextRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """从外部上下文创建笔记 — Agent 专用端点.
+
+    外部 AI Agent 可将对话记录、邮件内容等传入,
+    系统自动创建笔记并可选存入 embedding 向量.
+    """
+    # 源信息作为备注写入内容首行
+    source_prefix = f"> *来源: {body.source}*\n\n" if body.source else ""
+
+    note = NoteModel(
+        content=source_prefix + body.content.strip(),
+        user_id=user.id,
+        tags=list(set(t.strip() for t in body.tags if t.strip())),
+        visibility=body.visibility,
+    )
+
+    if body.embedding:
+        note.embedding = body.embedding
+
+    db.add(note)
+    await db.flush()
+    await db.refresh(note)
+
+    # 更新标签计数
+    for tag_name in note.tags:
+        await _upsert_tag_count(tag_name, user.id, db, delta=1)
+
     return NoteResponse.model_validate(note)
 
 
