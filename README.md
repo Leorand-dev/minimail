@@ -7,6 +7,8 @@
 ![React](https://img.shields.io/badge/React-19-61dafb)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791)
 
+> 🌐 **[English README](README_EN.md)**
+
 ---
 
 ## 📌 概述
