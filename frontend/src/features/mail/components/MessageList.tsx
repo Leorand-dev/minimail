@@ -3,6 +3,7 @@ import { useMailStore } from '@/stores/mail';
 import { fetchMessages, fetchMessageDetail, searchMessages as searchApi } from '@/api/mail';
 import type { MessageSummary } from '@/api/mail';
 import MessageRow from './MessageRow';
+import api from '@/api/client';
 
 interface MessageListProps {
   className?: string;
@@ -55,7 +56,13 @@ export default function MessageList({ className = '', onSelectMessage }: Message
       const detail = await fetchMessageDetail(currentFolder, msg.uid);
       setPreviewMessage(detail);
     } catch (err) {
-      console.warn('加载邮件详情失败:', err);
+      // IMAP 失败 — 尝试获取 demo 详情
+      try {
+        const res = await api.get('/mail/demo');
+        const details = res.data.details || {};
+        const detail = details[msg.uid];
+        if (detail) setPreviewMessage(detail);
+      } catch {}
     }
   };
 

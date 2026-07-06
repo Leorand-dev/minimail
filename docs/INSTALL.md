@@ -81,12 +81,12 @@ curl http://localhost:8000/health
 # 注册新用户
 curl -X POST http://localhost:8000/api/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"TestPass123","name":"测试"}'
+  -d '{"email":"test@example.com","password":"[YOUR_PASSWORD]","name":"测试"}'
 
 # 登录
 curl -X POST http://localhost:8000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"TestPass123"}'
+  -d '{"email":"test@example.com","password":"[YOUR_PASSWORD]"}'
 ```
 
 ## 项目结构
