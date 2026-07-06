@@ -31,84 +31,91 @@ export default function MailLayout() {
     setFolders, setMessages, setLoading, setError } = useMailStore();
 
   const initRef = useRef(false);
-  const demoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skipImapRef = useRef(false);
 
+  // ── 初始化: 只执行一次 ──
   useEffect(() => {
     if (initRef.current) return;
     initRef.current = true;
-    const tryDemoData = async () => {
-      try {
-        const res = await api.get('/mail/demo');
-        setFolders(res.data.folders);
-        setError(null);
-        // 加载 demo 邮件
-        setLoading(true);
-        const folderMsgs = res.data.messages?.messages || [];
-        setMessages(folderMsgs, folderMsgs.length, 1, 1);
-        setLoading(false);
-        return res.data;
-      } catch { setError('加载示例数据失败'); return null; }
-    };
+
     fetchFolders()
       .then(setFolders)
       .catch(async () => {
-        // IMAP 失败 — 跳过账户检查直接加载示例数据
-        await tryDemoData();
+        // IMAP 不可用 — 加载 demo 数据, 并标记不再尝试 IMAP
+        skipImapRef.current = true;
+        try {
+          const res = await api.get('/mail/demo');
+          setFolders(res.data.folders);
+          setError(null);
+          const folderMsgs = res.data.messages?.messages || [];
+          // 按当前文件夹筛选
+          const folder = currentFolder.toLowerCase();
+          const filtered = folder === 'inbox' ? folderMsgs
+            : folderMsgs.filter((m: any) => {
+                if (folder === 'sent') return m.from_?.email?.includes('demo');
+                if (folder === 'junk' || folder === 'drafts' || folder === 'trash' || folder === 'archive') return false;
+                return true;
+              });
+          setMessages(filtered, filtered.length, 1, 1);
+        } catch { setError('加载失败'); }
       });
-  }, [setFolders, setError, setLoading]);
+  }, [setFolders, setMessages, setError]);
 
+  // ── 切换文件夹/搜索/翻页: 加载邮件 ──
+  // 跳过 mount 时的首次执行 (init 已处理)
+  const mountedRef = useRef(false);
   const loadMessages = useCallback(async () => {
     setLoading(true);
     setError(null);
 
-    // 1. 先快速尝试 demo 端点 (本地, 毫秒级)
-    let loadedFromDemo = false;
-    try {
-      const demoRes = await api.get('/mail/demo');
-      const folderMsgs = (demoRes.data.messages?.messages || []);
-      const folder = currentFolder.toLowerCase();
-      const filtered = folder === 'inbox' ? folderMsgs
-        : folderMsgs.filter((m: any) => {
-            if (folder === 'sent') return m.from_?.email?.includes('demo');
-            if (folder === 'junk' || folder === 'drafts' || folder === 'trash' || folder === 'archive') return false;
-            return true;
-          });
-      setMessages(filtered, filtered.length, 1, 1);
-      loadedFromDemo = true;
-    } catch { /* demo 不可用, 继续尝试 IMAP */ }
+    // Demo 模式: 快速过滤本地 demo 数据, 不连 IMAP
+    if (skipImapRef.current) {
+      try {
+        const res = await api.get('/mail/demo');
+        const folderMsgs = (res.data.messages?.messages || []);
+        const folder = currentFolder.toLowerCase();
+        const filtered = folder === 'inbox' ? folderMsgs
+          : folderMsgs.filter((m: any) => {
+              if (folder === 'sent') return m.from_?.email?.includes('demo');
+              if (folder === 'junk' || folder === 'drafts' || folder === 'trash' || folder === 'archive') return false;
+              return true;
+            });
+        setMessages(filtered, filtered.length, 1, 1);
+      } catch { setError('加载失败'); }
+      finally { setLoading(false); }
+      return;
+    }
 
-    // 2. 再尝试真实 IMAP (可能超时, 但 demo 已展示)
+    // 真实 IMAP 模式
     try {
-      if (!demoTimerRef.current) {
-        const imapPromise = searchQuery.trim()
-          ? searchApi(searchQuery, currentFolder, page, 50, {
-              date_from: searchDateFrom || undefined,
-              date_to: searchDateTo || undefined,
-              unread_only: searchUnreadOnly || undefined,
-            })
-          : fetchMessages(currentFolder, page, 50);
-        // 快速超时: 3 秒内 IMAP 无响应就放弃
-        const timeout = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('IMAP timeout')), 3000)
-        );
-        const res = await Promise.race([imapPromise, timeout]);
-        setMessages(res.messages, res.total, res.page, res.total_pages);
-      }
+      const res = searchQuery.trim()
+        ? await searchApi(searchQuery, currentFolder, page, 50, {
+            date_from: searchDateFrom || undefined,
+            date_to: searchDateTo || undefined,
+            unread_only: searchUnreadOnly || undefined,
+          })
+        : await fetchMessages(currentFolder, page, 50);
+      setMessages(res.messages, res.total, res.page, res.total_pages);
     } catch {
-      // IMAP 超时或失败 — demo 数据已展示, 不报错
-      if (!loadedFromDemo) {
-        // demo 也没加载到, 尝试最后一次
-        try {
-          const demoRes = await api.get('/mail/demo');
-          const folderMsgs = (demoRes.data.messages?.messages || []);
-          setMessages(folderMsgs, folderMsgs.length, 1, 1);
-        } catch { setError('加载邮件失败'); }
-      }
+      // IMAP 失败 — 降级到 demo
+      skipImapRef.current = true;
+      try {
+        const res = await api.get('/mail/demo');
+        const folderMsgs = (res.data.messages?.messages || []);
+        setMessages(folderMsgs, folderMsgs.length, 1, 1);
+      } catch { setError('加载邮件失败'); }
     }
     finally { setLoading(false); }
   }, [currentFolder, page, searchQuery, searchDateFrom, searchDateTo, searchUnreadOnly, setMessages, setLoading, setError]);
 
-  useEffect(() => { if (activeView === 'mail') loadMessages(); }, [loadMessages, activeView]);
+  // 加载邮件: 首次 mount 由 init 处理, 后续变更才触发
+  useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return; // 跳过首次 (init 已处理)
+    }
+    if (activeView === 'mail') loadMessages();
+  }, [loadMessages, activeView]);
 
   const cfg = VIEW_CONFIG[activeView] || VIEW_CONFIG.mail;
 
@@ -119,13 +126,10 @@ export default function MailLayout() {
         <Toolbar />
       ) : (
         <header className="flex items-center gap-2 px-3 h-[55px] border-b border-gray-200 bg-white">
-          {/* Logo + App Name (same as Toolbar) */}
           <div className="flex items-center gap-2 mr-2">
             <div className="w-7 h-7 rounded-md bg-[#066da5] flex items-center justify-center text-white font-bold text-sm">M</div>
             <span className="font-semibold text-gray-700 hidden sm:inline">Minimail</span>
           </div>
-
-          {/* Back + Title */}
           <button
             onClick={() => setActiveView('mail')}
             className="flex items-center gap-1 text-sm text-gray-500 hover:text-[#066da5] transition-colors"
