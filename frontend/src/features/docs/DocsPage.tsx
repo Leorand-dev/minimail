@@ -143,7 +143,7 @@ export default function DocsPage() {
           ) : (
             <div
               ref={contentRef}
-              className="prose prose-sm max-w-none"
+              className="overflow-y-auto"
               dangerouslySetInnerHTML={{ __html: content }}
             />
           )}
