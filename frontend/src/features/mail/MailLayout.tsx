@@ -18,12 +18,12 @@ import MemosPage from '@/features/memos/MemosPage';
 /** Header titles & actions for each view */
 const VIEW_CONFIG: Record<string, { title: string; icon: string }> = {
   mail:     { title: '收件箱',    icon: '📥' },
-  compose:  { title: '写邮件',    icon: '✏️' },
+  compose:  { title: '写邮件',    icon: '✉️' },
   settings: { title: '设置',      icon: '⚙️' },
-  contacts: { title: '通讯录',    icon: '👤' },
+  contacts: { title: '通讯录',    icon: '👥' },
   apikeys:  { title: 'API 密钥', icon: '🔑' },
   profile:  { title: '个人信息',  icon: '👤' },
-  docs:     { title: 'API 文档',  icon: '📄' },
+  docs:     { title: '系统文档',  icon: '📚' },
   memos:    { title: '笔记库',    icon: '📝' },
 };
 

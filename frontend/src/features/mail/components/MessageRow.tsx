@@ -74,34 +74,34 @@ export default function MessageRow({ message, selected, checked, onToggleCheck, 
   return (
     <div
       onClick={onSelect}
-      className={`flex items-center px-3 py-2.5 border-b border-gray-100 cursor-pointer transition-all duration-150 ${
+      className={`flex items-center px-3 py-3 border-b border-gray-100 cursor-pointer transition-all duration-150 ${
         selected
-          ? 'bg-[#c7dbff] border-l-2 border-l-[#066da5] shadow-sm'
+          ? 'bg-blue-50 border-l-[3px] border-l-[#066da5] shadow-sm'
           : message.is_read
-          ? 'bg-white hover:bg-[#edf3ff] hover:border-l-2 hover:border-l-transparent'
-          : 'bg-white font-semibold hover:bg-[#edf3ff] hover:border-l-2 hover:border-l-transparent'
+          ? 'bg-white hover:bg-gray-50'
+          : 'bg-white font-semibold hover:bg-gray-50'
       }`}
     >
       {/* Checkbox */}
-      <div className="w-9 flex-shrink-0 flex items-center" onClick={(e) => { e.stopPropagation(); onToggleCheck?.(); }}>
+      <div className="w-10 flex-shrink-0 flex items-center" onClick={(e) => { e.stopPropagation(); onToggleCheck?.(); }}>
         <input
           type="checkbox"
           checked={checked || false}
           onChange={() => onToggleCheck?.()}
-          className="accent-[#066da5]"
+          className="accent-[#066da5] rounded"
         />
       </div>
 
       {/* Avatar / Flag icon */}
-      <div className="w-8 flex-shrink-0 flex items-center justify-center">
+      <div className="w-9 flex-shrink-0 flex items-center justify-center">
         {isFlagged ? (
-          <span className="text-yellow-500 text-sm">⭐</span>
+          <span className="text-amber-400 text-sm drop-shadow-sm">⭐</span>
         ) : !message.is_read ? (
-          <div className="w-7 h-7 rounded-full bg-[#066da5] flex items-center justify-center text-white text-[11px] font-bold">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#066da5] to-[#0a8fd4] flex items-center justify-center text-white text-xs font-bold shadow-sm">
             {getAvatarLetter(message.from_)}
           </div>
         ) : (
-          <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-[11px] font-medium">
+          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 text-xs font-medium">
             {getAvatarLetter(message.from_)}
           </div>
         )}

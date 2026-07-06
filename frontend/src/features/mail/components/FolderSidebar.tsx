@@ -195,7 +195,7 @@ export default function FolderSidebar({ className = '', onSelectFolder }: Folder
         }}
       />
 
-      <div className="border-t border-gray-200 mx-3" />
+      <div className="border-t border-gray-100 mx-3" />
       <div className="px-3 pt-2 pb-1">
         <div className="flex flex-col gap-0.5">
           <NavItem icon="🔑" label="API 密钥" onClick={() => setActiveView('apikeys')} />
@@ -348,16 +348,16 @@ function NavItem({ icon, label, count, active, onClick }: { icon: string; label:
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded text-left ${
+      className={`flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg text-left transition-all duration-150 ${
         active
-          ? 'bg-[#d0e2f3] text-[#066da5] font-medium'
-          : 'text-gray-600 hover:bg-gray-200 hover:text-gray-800'
+          ? 'bg-[#066da5]/10 text-[#066da5] font-medium shadow-sm'
+          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
       }`}
     >
-      <span className="flex-shrink-0">{icon}</span>
+      <span className="flex-shrink-0 text-base">{icon}</span>
       <span className="flex-1 truncate">{label}</span>
       {count !== undefined && count > 0 && (
-        <span className="flex-shrink-0 bg-[#066da5] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+        <span className="flex-shrink-0 bg-[#066da5] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-tight shadow-sm">
           {count > 99 ? '99+' : count}
         </span>
       )}

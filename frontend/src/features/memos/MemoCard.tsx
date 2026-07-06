@@ -32,34 +32,35 @@ function formatTime(iso: string): string {
 
 export default function MemoCard({ note, onEdit, onDelete, onTogglePin }: MemoCardProps) {
   return (
-    <div className="group bg-white rounded-lg border border-gray-200 p-4 hover:border-gray-300 transition-colors">
+    <div className="group bg-white rounded-lg border border-gray-200 p-4 hover:border-gray-300 hover:shadow-sm transition-all duration-150">
+
       {/* 头部: 时间 + 置顶图标 + 操作按钮 */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2 text-xs text-gray-400">
-          {note.pinned && <span className="text-amber-500">📌</span>}
+          {note.pinned && <span className="text-amber-500 drop-shadow-sm">📌</span>}
           <span>{formatTime(note.created_at)}</span>
           {note.visibility === 'public' && (
-            <span className="px-1.5 py-0.5 rounded bg-green-50 text-green-600 text-[10px]">公开</span>
+            <span className="px-1.5 py-0.5 rounded-full bg-green-50 text-green-600 text-[10px] font-medium">公开</span>
           )}
         </div>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={() => onTogglePin(note.id)}
-            className="p-1 rounded hover:bg-gray-100 text-xs text-gray-400 hover:text-amber-500"
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-xs text-gray-400 hover:text-amber-500 transition-colors"
             title={note.pinned ? '取消置顶' : '置顶'}
           >
             📌
           </button>
           <button
             onClick={() => onEdit(note)}
-            className="p-1 rounded hover:bg-gray-100 text-xs text-gray-400 hover:text-blue-500"
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-xs text-gray-400 hover:text-blue-500 transition-colors"
             title="编辑"
           >
             ✏️
           </button>
           <button
             onClick={() => onDelete(note.id)}
-            className="p-1 rounded hover:bg-gray-100 text-xs text-gray-400 hover:text-red-500"
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-xs text-gray-400 hover:text-red-500 transition-colors"
             title="删除"
           >
             🗑️
@@ -74,11 +75,11 @@ export default function MemoCard({ note, onEdit, onDelete, onTogglePin }: MemoCa
 
       {/* 底部: 标签 */}
       {note.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-3">
+        <div className="flex flex-wrap gap-1.5 mt-3">
           {note.tags.map((tag) => (
             <span
               key={tag}
-              className="px-2 py-0.5 rounded-full bg-gray-100 text-xs text-gray-500"
+              className="px-2 py-0.5 rounded-full bg-[#066da5]/5 text-[#066da5] text-xs font-medium"
             >
               #{tag}
             </span>
