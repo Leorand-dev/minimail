@@ -89,8 +89,6 @@ export default function MailLayout() {
             <span>返回</span>
           </button>
           <span className="text-sm font-semibold text-gray-700 ml-1">{cfg.icon} {cfg.title}</span>
-          <div className="flex-1" />
-          {/* Contextual action buttons (same style as Toolbar) */}
           {(activeView === 'contacts' || activeView === 'apikeys') && (
             <button
               onClick={() => window.dispatchEvent(new CustomEvent('panel-new'))}
@@ -107,6 +105,7 @@ export default function MailLayout() {
               发送
             </button>
           )}
+          <div className="flex-1" />
           <UserMenu />
         </header>
       )}

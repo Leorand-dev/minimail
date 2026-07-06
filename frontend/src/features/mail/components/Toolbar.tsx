@@ -91,9 +91,10 @@ export default function Toolbar() {
       )}
 
       {/* Folder info */}
-      <span className="text-xs text-gray-400 hidden md:inline">
+      <span className="text-xs text-gray-400 hidden md:inline mr-1">
         {currentFolder} · {totalMessages} 封
       </span>
+      <div className="flex-1" />
       <UserMenu />
     </header>
   );
