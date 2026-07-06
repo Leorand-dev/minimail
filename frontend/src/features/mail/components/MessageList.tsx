@@ -40,13 +40,30 @@ export default function MessageList({ className = '', onSelectMessage }: Message
   };
 
   if (error) {
+    const isConfigError = error.includes('配置') || error.includes('IMAP') || error.includes('连接');
     return (
       <div className={`${className} items-center justify-center text-gray-400`}>
-        <div className="text-center">
-          <p className="mb-2">⚠️ {error}</p>
-          <button onClick={handleRefresh} className="text-[#066da5] hover:underline text-sm">
-            重试
-          </button>
+        <div className="text-center max-w-xs">
+          <div className="text-3xl mb-3">{isConfigError ? '📭' : '⚠️'}</div>
+          <p className="mb-1 text-gray-500">{isConfigError ? '邮箱尚未配置' : error}</p>
+          <p className="mb-3 text-xs text-gray-400">
+            {isConfigError
+              ? '请先到设置页面配置 IMAP/SMTP 邮箱账户'
+              : '请检查网络连接后重试'}
+          </p>
+          <div className="flex gap-2 justify-center">
+            {isConfigError && (
+              <button
+                onClick={() => window.location.href = '/settings'}
+                className="px-4 py-1.5 bg-[#066da5] text-white text-xs rounded hover:bg-[#05588a]"
+              >
+                ⚙️ 去设置
+              </button>
+            )}
+            <button onClick={handleRefresh} className="px-4 py-1.5 text-[#066da5] text-xs border border-[#066da5] rounded hover:bg-blue-50">
+              重试
+            </button>
+          </div>
         </div>
       </div>
     );

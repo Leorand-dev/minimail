@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '@/api/client';
+import AutocompleteInput from './AutocompleteInput';
 
 export default function ComposePage() {
   const navigate = useNavigate();
@@ -31,19 +32,22 @@ export default function ComposePage() {
       const ccList = cc.split(',').map((s) => s.trim()).filter(Boolean);
       const bccList = bcc.split(',').map((s) => s.trim()).filter(Boolean);
 
-      const res = await api.post('/api/mail/send', {
+      const payload: Record<string, unknown> = {
         to: toList,
         cc: ccList.length ? ccList : undefined,
         bcc: bccList.length ? bccList : undefined,
         subject,
         text_body: body,
-        from_addr: from || undefined,
-      });
+      };
+      if (from.trim()) payload.from_addr = from.trim();
 
-      setSuccess(`✅ 发送成功 (${res.data.message_id})`);
+      const res = await api.post('/api/mail/send', payload);
+
+      setSuccess(`✅ 发送成功`);
       setTimeout(() => navigate('/mail'), 2000);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || '发送失败');
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { detail?: string } }; message?: string };
+      setError(axiosErr?.response?.data?.detail || axiosErr?.message || '发送失败');
     } finally {
       setSending(false);
     }
@@ -83,8 +87,9 @@ export default function ComposePage() {
         </div>
       )}
 
-      {/* Form fields (Roundcube 风格: 紧凑表单) */}
+      {/* Form fields */}
       <div className="flex-1">
+        {/* 发件人 */}
         <div className="flex items-center border-b border-gray-200">
           <label className="w-16 flex-shrink-0 px-3 text-xs font-medium text-gray-500">发件人</label>
           <input
@@ -95,37 +100,33 @@ export default function ComposePage() {
             className="flex-1 px-2 py-2.5 text-sm border-0 outline-none text-gray-500"
           />
         </div>
-        <div className="flex items-center border-b border-gray-200">
-          <label className="w-16 flex-shrink-0 px-3 text-xs font-medium text-gray-500">收件人</label>
-          <input
-            ref={toRef}
-            type="text"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            placeholder="user@example.com (多个地址用逗号分隔)"
-            className="flex-1 px-2 py-2.5 text-sm border-0 outline-none"
-          />
-        </div>
-        <div className="flex items-center border-b border-gray-200">
-          <label className="w-16 flex-shrink-0 px-3 text-xs font-medium text-gray-500">抄送</label>
-          <input
-            type="text"
-            value={cc}
-            onChange={(e) => setCc(e.target.value)}
-            placeholder="抄送地址"
-            className="flex-1 px-2 py-2.5 text-sm border-0 outline-none"
-          />
-        </div>
-        <div className="flex items-center border-b border-gray-200">
-          <label className="w-16 flex-shrink-0 px-3 text-xs font-medium text-gray-500">密送</label>
-          <input
-            type="text"
-            value={bcc}
-            onChange={(e) => setBcc(e.target.value)}
-            placeholder="密送地址"
-            className="flex-1 px-2 py-2.5 text-sm border-0 outline-none"
-          />
-        </div>
+
+        {/* 收件人 with autocomplete */}
+        <AutocompleteInput
+          value={to}
+          onChange={setTo}
+          label="收件人"
+          placeholder="user@example.com (多个地址用逗号分隔)"
+          inputRef={toRef}
+        />
+
+        {/* 抄送 with autocomplete */}
+        <AutocompleteInput
+          value={cc}
+          onChange={setCc}
+          label="抄送"
+          placeholder="抄送地址"
+        />
+
+        {/* 密送 with autocomplete */}
+        <AutocompleteInput
+          value={bcc}
+          onChange={setBcc}
+          label="密送"
+          placeholder="密送地址"
+        />
+
+        {/* 主题 */}
         <div className="flex items-center border-b border-gray-200">
           <label className="w-16 flex-shrink-0 px-3 text-xs font-medium text-gray-500">主题</label>
           <input
@@ -136,6 +137,8 @@ export default function ComposePage() {
             className="flex-1 px-2 py-2.5 text-sm border-0 outline-none"
           />
         </div>
+
+        {/* 正文 */}
         <textarea
           value={body}
           onChange={(e) => setBody(e.target.value)}

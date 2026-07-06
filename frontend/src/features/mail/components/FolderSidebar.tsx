@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMailStore } from '@/stores/mail';
+import { useAuthStore } from '@/stores/auth';
 import type { Folder } from '@/api/mail';
 
 interface FolderSidebarProps {
@@ -87,9 +88,15 @@ export default function FolderSidebar({ className = '', onSelectFolder }: Folder
   const folders = useMailStore((s) => s.folders);
   const currentFolder = useMailStore((s) => s.currentFolder);
   const setCurrentFolder = useMailStore((s) => s.setCurrentFolder);
+  const clearAuth = useAuthStore((s) => s.clearAuth);
   const unseenTotal = folders.reduce((sum, f) => sum + (f.unseen || 0), 0);
 
   const hierarchy = buildHierarchy(folders);
+
+  const handleLogout = () => {
+    clearAuth();
+    navigate('/login');
+  };
 
   return (
     <aside className={`w-56 bg-[#f5f6f7] border-r border-gray-200 flex flex-col ${className}`}>
@@ -146,8 +153,16 @@ export default function FolderSidebar({ className = '', onSelectFolder }: Folder
       </nav>
 
       {/* ═══ 底部状态 ═══ */}
-      <div className="px-3 py-2 border-t border-gray-200 text-[10px] text-gray-400">
-        {folders.length} 个文件夹 · {unseenTotal} 封未读
+      <div className="px-3 py-2 border-t border-gray-200">
+        <div className="text-[10px] text-gray-400 px-3 mb-1">
+          {folders.length} 个文件夹 · {unseenTotal} 封未读
+        </div>
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+        >
+          🚪 退出登录
+        </button>
       </div>
     </aside>
   );
