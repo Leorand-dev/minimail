@@ -5,8 +5,7 @@
  * 内容从后端 /system-docs 端点获取
  */
 
-import React, { useEffect, useState } from 'react';
-import ReactMarkdown from 'react-markdown';
+import React, { useEffect, useState, useRef } from 'react';
 import api from '@/api/client';
 
 interface DocEntry {
@@ -74,15 +73,16 @@ export default function DocsPage() {
   const [content, setContent] = useState('');
   const [currentPath, setCurrentPath] = useState('system/index.md');
   const [loading, setLoading] = useState(true);
+  const contentRef = useRef<HTMLDivElement>(null);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['系统文档']));
 
   const navItems = flattenNav(DOC_NAV);
 
   useEffect(() => {
     setLoading(true);
-    api.get(`/system-docs/${currentPath}`, { responseType: 'text' })
+    api.get(`/system-docs/${currentPath}`)
       .then((res) => {
-        setContent(typeof res.data === 'string' ? res.data : '');
+        setContent(typeof res.data === 'string' ? res.data : JSON.stringify(res.data));
       })
       .catch(() => {
         setContent('# 文档加载失败\n\n请稍后重试。');
@@ -141,9 +141,11 @@ export default function DocsPage() {
               <div className="h-20 bg-gray-200 rounded" />
             </div>
           ) : (
-            <div className="prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-a:text-[#066da5] prose-code:text-pink-600 prose-pre:bg-gray-50 prose-pre:border prose-pre:border-gray-200 prose-table:text-sm prose-th:text-left prose-th:bg-gray-50 prose-td:border prose-td:border-gray-200 prose-td:p-2">
-              <ReactMarkdown>{content}</ReactMarkdown>
-            </div>
+            <div
+              ref={contentRef}
+              className="prose prose-sm max-w-none"
+              dangerouslySetInnerHTML={{ __html: content }}
+            />
           )}
         </div>
       </div>
