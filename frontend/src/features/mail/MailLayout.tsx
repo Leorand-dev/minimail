@@ -13,6 +13,7 @@ import ApiKeysContent from '@/features/api-keys/ApiKeysPanel';
 import UserMenu from '@/features/user/UserMenu';
 import ProfilePanel from '@/features/user/ProfilePanel';
 import DocsPage from '@/features/docs/DocsPage';
+import MemosPage from '@/features/memos/MemosPage';
 
 /** Header titles & actions for each view */
 const VIEW_CONFIG: Record<string, { title: string; icon: string }> = {
@@ -23,6 +24,7 @@ const VIEW_CONFIG: Record<string, { title: string; icon: string }> = {
   apikeys:  { title: 'API 密钥', icon: '🔑' },
   profile:  { title: '个人信息',  icon: '👤' },
   docs:     { title: 'API 文档',  icon: '📄' },
+  memos:    { title: '笔记库',    icon: '📝' },
 };
 
 export default function MailLayout() {
@@ -238,6 +240,7 @@ export default function MailLayout() {
         {activeView === 'apikeys' && <ApiKeysContent />}
         {activeView === 'profile' && <ProfilePanel />}
         {activeView === 'docs' && <DocsPage />}
+        {activeView === 'memos' && <MemosPage />}
       </div>
 
       {/* ═══ 底部导航 (手机) ═══ */}

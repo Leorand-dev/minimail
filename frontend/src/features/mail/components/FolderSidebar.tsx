@@ -175,6 +175,7 @@ export default function FolderSidebar({ className = '', onSelectFolder }: Folder
             onSelectFolder?.();
           }} />
           <NavItem icon="👤" label="通讯录" onClick={() => setActiveView('contacts')} />
+          <NavItem icon="📝" label="笔记库" onClick={() => setActiveView('memos')} />
           <NavItem icon="🔑" label="API 密钥" onClick={() => setActiveView('apikeys')} />
           <NavItem icon="📄" label="API 文档" onClick={() => setActiveView('docs')} />
           <NavItem icon="⚙️" label="设置" onClick={() => setActiveView('settings')} />
