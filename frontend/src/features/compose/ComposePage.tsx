@@ -67,7 +67,7 @@ export default function ComposePage({ onBack }: ComposePageProps) {
   };
 
   return (
-    <div className="max-w-3xl mx-auto bg-white border-x border-gray-200 min-h-screen flex flex-col">
+    <div className="max-w-3xl mx-auto bg-white border-x border-gray-200 flex-1 flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
         <div className="flex items-center gap-3">

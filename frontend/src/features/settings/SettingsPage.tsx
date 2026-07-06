@@ -74,16 +74,20 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      {/* Back */}
-      <button
-        onClick={() => onBack ? onBack() : navigate('/mail')}
-        className="text-sm text-[#066da5] hover:underline mb-4"
-      >
-        ← 返回邮箱
-      </button>
+    <div className="flex flex-1 flex-col">
+      {/* Toolbar header */}
+      <header className="flex items-center gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50">
+        <button
+          onClick={() => onBack ? onBack() : navigate('/mail')}
+          className="text-sm text-[#066da5] hover:underline"
+        >
+          ← 返回邮箱
+        </button>
+        <span className="flex-1 text-sm font-semibold text-gray-700">邮件账户设置</span>
+      </header>
 
-      <h1 className="text-xl font-semibold text-gray-800 mb-6">邮件账户设置</h1>
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="max-w-2xl mx-auto">
 
       {error && (
         <div className="mb-4 px-4 py-2 bg-red-50 border border-red-200 rounded text-red-600 text-sm">
@@ -238,5 +242,7 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
         </button>
       </div>
     </div>
+  </div>
+</div>
   );
 }

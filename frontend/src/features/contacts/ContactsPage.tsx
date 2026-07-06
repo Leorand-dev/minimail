@@ -86,7 +86,7 @@ export default function ContactsPage({ onBack }: ContactsPageProps) {
   };
 
   return (
-    <div className="flex h-screen flex-col bg-white">
+    <div className="flex flex-1 flex-col bg-white">
       {/* Toolbar */}
       <header className="flex items-center gap-2 px-3 py-2 border-b border-gray-200">
         <button onClick={() => onBack ? onBack() : navigate('/mail')} className="text-sm text-[#066da5] hover:underline">← 返回邮箱</button>
