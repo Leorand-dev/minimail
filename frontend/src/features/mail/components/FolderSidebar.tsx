@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useMailStore } from '@/stores/mail';
 import type { Folder } from '@/api/mail';
 
@@ -82,6 +83,7 @@ function buildHierarchy(folders: Folder[]): { folder: Folder; depth: number }[] 
 }
 
 export default function FolderSidebar({ className = '', onSelectFolder }: FolderSidebarProps) {
+  const navigate = useNavigate();
   const folders = useMailStore((s) => s.folders);
   const currentFolder = useMailStore((s) => s.currentFolder);
   const setCurrentFolder = useMailStore((s) => s.setCurrentFolder);
@@ -91,41 +93,79 @@ export default function FolderSidebar({ className = '', onSelectFolder }: Folder
 
   return (
     <aside className={`w-56 bg-[#f5f6f7] border-r border-gray-200 flex flex-col ${className}`}>
-      {/* Header */}
-      <div className="px-3 py-3 border-b border-gray-200">
+      {/* ═══ 顶部: 写邮件按钮 ═══ */}
+      <div className="px-3 pt-3 pb-2">
+        <button
+          onClick={() => navigate('/compose')}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-[#066da5] text-white text-sm font-medium rounded-lg hover:bg-[#05588a] transition-colors shadow-sm"
+        >
+          ✏️ 写邮件
+        </button>
+      </div>
+
+      {/* ═══ 功能导航 ═══ */}
+      <div className="px-3 pb-1">
+        <div className="flex flex-col gap-0.5">
+          <NavItem icon="📥" label="收件箱" active={currentFolder === 'INBOX'} onClick={() => { setCurrentFolder('INBOX'); onSelectFolder?.(); }} />
+          <NavItem icon="👤" label="通讯录" onClick={() => navigate('/contacts')} />
+          <NavItem icon="⚙️" label="设置" onClick={() => navigate('/settings')} />
+        </div>
+      </div>
+
+      {/* ═══ 分隔线 ═══ */}
+      <div className="border-t border-gray-200 mx-3" />
+
+      {/* ═══ 文件夹标题 ═══ */}
+      <div className="px-3 pt-2 pb-1">
         <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
           文件夹
         </h2>
       </div>
 
-      {/* Folder list */}
-      <nav className="flex-1 overflow-y-auto py-1 space-y-0.5">
-        {hierarchy.map(({ folder, depth }) => (
-          <FolderItem
-            key={folder.name}
-            folder={folder}
-            depth={depth}
-            selected={folder.name === currentFolder}
-            onSelect={() => {
-              setCurrentFolder(folder.name);
-              onSelectFolder?.();
-            }}
-          />
-        ))}
+      {/* ═══ 文件夹列表 ═══ */}
+      <nav className="flex-1 overflow-y-auto pb-1 space-y-0.5 px-1">
+        {folders.length === 0 ? (
+          <div className="px-3 py-3 text-xs text-gray-400 text-center">
+            暂无文件夹<br />
+            <span className="text-[10px]">请先在设置中配置邮箱</span>
+          </div>
+        ) : (
+          hierarchy.map(({ folder, depth }) => (
+            <FolderItem
+              key={folder.name}
+              folder={folder}
+              depth={depth}
+              selected={folder.name === currentFolder}
+              onSelect={() => {
+                setCurrentFolder(folder.name);
+                onSelectFolder?.();
+              }}
+            />
+          ))
+        )}
       </nav>
 
-      {/* Quota / bottom */}
-      <div className="px-3 py-2 border-t border-gray-200">
-        <button
-          onClick={() => window.location.href = '/contacts'}
-          className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-200 rounded"
-        >
-          👤 通讯录
-        </button>
-        <div className="mt-1 text-[10px] text-gray-400 px-3">
-          {folders.length} 个文件夹 · {unseenTotal} 封未读
-        </div>
+      {/* ═══ 底部状态 ═══ */}
+      <div className="px-3 py-2 border-t border-gray-200 text-[10px] text-gray-400">
+        {folders.length} 个文件夹 · {unseenTotal} 封未读
       </div>
     </aside>
+  );
+}
+
+/** 导航项目组件 */
+function NavItem({ icon, label, active, onClick }: { icon: string; label: string; active?: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded text-left ${
+        active
+          ? 'bg-[#d0e2f3] text-[#066da5] font-medium'
+          : 'text-gray-600 hover:bg-gray-200 hover:text-gray-800'
+      }`}
+    >
+      <span className="flex-shrink-0">{icon}</span>
+      <span>{label}</span>
+    </button>
   );
 }

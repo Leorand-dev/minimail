@@ -73,7 +73,7 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
+              placeholder="输入密码"
               required
               className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-[#066da5] focus:ring-1 focus:ring-[#066da5]"
             />

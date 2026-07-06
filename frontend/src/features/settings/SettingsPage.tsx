@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchMailSettings, updateMailSettings } from '@/api/settings';
+import { fetchMailSettings, testMailConnection, updateMailSettings } from '@/api/settings';
 
 export default function SettingsPage() {
   const navigate = useNavigate();
@@ -9,6 +9,7 @@ export default function SettingsPage() {
   const [smtp, setSmtp] = useState({ host: '', port: 465, ssl: true, username: '', password: '' });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
 
@@ -18,7 +19,11 @@ export default function SettingsPage() {
         setImap(data.imap);
         setSmtp(data.smtp);
       })
-      .catch(() => setError('无法加载设置'))
+      .catch((err) => {
+        if (err?.response?.status !== 401) {
+          console.warn('加载设置失败:', err);
+        }
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -33,6 +38,25 @@ export default function SettingsPage() {
       setError('保存失败');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleTest = async () => {
+    setTesting(true);
+    setError('');
+    setSuccess('');
+    try {
+      const res = await testMailConnection();
+      if (res.status === 'ok') {
+        setSuccess('✅ 连接测试通过！');
+      } else {
+        const msgs = (res.errors || ['未知错误']).join('; ');
+        setError(`❌ 连接测试失败: ${msgs}`);
+      }
+    } catch {
+      setError('连接测试请求失败');
+    } finally {
+      setTesting(false);
     }
   };
 
@@ -194,6 +218,13 @@ export default function SettingsPage() {
           className="px-6 py-2 bg-[#066da5] text-white text-sm font-medium rounded hover:bg-[#05588a] disabled:opacity-50 transition-colors"
         >
           {saving ? '保存中...' : '保存设置'}
+        </button>
+        <button
+          onClick={handleTest}
+          disabled={testing}
+          className="px-6 py-2 bg-white text-[#066da5] text-sm font-medium border border-[#066da5] rounded hover:bg-blue-50 disabled:opacity-50 transition-colors"
+        >
+          {testing ? '测试中...' : '🔌 测试连接'}
         </button>
         <button
           onClick={() => navigate('/mail')}

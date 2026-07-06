@@ -5,6 +5,7 @@ import api from '@/api/client';
 export default function ComposePage() {
   const navigate = useNavigate();
   const toRef = useRef<HTMLInputElement>(null);
+  const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [cc, setCc] = useState('');
   const [bcc, setBcc] = useState('');
@@ -36,6 +37,7 @@ export default function ComposePage() {
         bcc: bccList.length ? bccList : undefined,
         subject,
         text_body: body,
+        from_addr: from || undefined,
       });
 
       setSuccess(`✅ 发送成功 (${res.data.message_id})`);
@@ -83,6 +85,16 @@ export default function ComposePage() {
 
       {/* Form fields (Roundcube 风格: 紧凑表单) */}
       <div className="flex-1">
+        <div className="flex items-center border-b border-gray-200">
+          <label className="w-16 flex-shrink-0 px-3 text-xs font-medium text-gray-500">发件人</label>
+          <input
+            type="text"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            placeholder="your@email.com"
+            className="flex-1 px-2 py-2.5 text-sm border-0 outline-none text-gray-500"
+          />
+        </div>
         <div className="flex items-center border-b border-gray-200">
           <label className="w-16 flex-shrink-0 px-3 text-xs font-medium text-gray-500">收件人</label>
           <input
