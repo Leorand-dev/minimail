@@ -1,4 +1,4 @@
-# Webmail 开发路线图
+# Minimail 开发路线图
 
 > 完整开发计划见 [`DEVELOPMENT_PLAN.md`](DEVELOPMENT_PLAN.md)
 

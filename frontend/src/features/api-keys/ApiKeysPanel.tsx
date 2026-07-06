@@ -65,7 +65,7 @@ export default function ApiKeysPanel() {
         <div className="max-w-3xl mx-auto">
           {/* Sub-header description */}
           <p className="text-sm text-gray-500 mb-6">
-            管理用于外部应用访问 Webmail API 的鉴权密钥
+            管理用于外部应用访问 Minimail API 的鉴权密钥
           </p>
 
           {/* Error */}

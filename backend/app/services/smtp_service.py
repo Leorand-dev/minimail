@@ -59,7 +59,7 @@ def _build_message(
     msg["To"] = ", ".join(to_addrs)
     msg["Subject"] = _encoded_header(subject)
     msg["Date"] = email.utils.formatdate(localtime=True)
-    msg["Message-ID"] = f"<{uuid.uuid4().hex}@webmail.local>"
+    msg["Message-ID"] = f"<{uuid.uuid4().hex}@minimail.local>"
     msg["MIME-Version"] = "1.0"
 
     if cc:

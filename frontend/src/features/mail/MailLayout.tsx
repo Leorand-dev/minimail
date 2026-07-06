@@ -72,7 +72,7 @@ export default function MailLayout() {
           {/* Logo + App Name (same as Toolbar) */}
           <div className="flex items-center gap-2 mr-2">
             <div className="w-7 h-7 rounded-md bg-[#066da5] flex items-center justify-center text-white font-bold text-sm">M</div>
-            <span className="font-semibold text-gray-700 hidden sm:inline">Webmail</span>
+            <span className="font-semibold text-gray-700 hidden sm:inline">Minimail</span>
           </div>
 
           {/* Back + Title */}

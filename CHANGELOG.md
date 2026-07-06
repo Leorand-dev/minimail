@@ -1,4 +1,4 @@
-# Changelog
+# Minimail Changelog
 
 所有重要变更均记录在此文件。
 

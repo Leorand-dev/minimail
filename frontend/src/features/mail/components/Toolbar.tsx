@@ -30,7 +30,7 @@ export default function Toolbar() {
         <div className="w-7 h-7 rounded-md bg-[#066da5] flex items-center justify-center text-white font-bold text-sm">
           M
         </div>
-        <span className="font-semibold text-gray-700 hidden sm:inline">Webmail</span>
+        <span className="font-semibold text-gray-700 hidden sm:inline">Minimail</span>
       </div>
 
       {/* Search bar (Roundcube 风格: 圆角搜索框 + 清除按钮) */}

@@ -38,7 +38,7 @@ export default function LoginPage() {
           <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-xl bg-[#066da5] text-3xl font-bold text-white">
             M
           </div>
-          <h1 className="text-xl font-semibold text-gray-800">Webmail</h1>
+          <h1 className="text-xl font-semibold text-gray-800">Minimail</h1>
         </div>
 
         {/* Error */}
@@ -96,7 +96,7 @@ export default function LoginPage() {
         </p>
 
         <div className="mt-4 text-center text-xs text-gray-400">
-          &copy; 2026 Webmail
+          &copy; 2026 Minimail
         </div>
       </div>
     </div>

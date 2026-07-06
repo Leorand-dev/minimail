@@ -1,4 +1,4 @@
-# Webmail — 智能邮件系统
+# Minimail — 智能邮件系统
 
 基于 [Roundcube Webmail](https://github.com/roundcube/roundcubemail) 架构分析构建的新一代邮件系统，融合 **AI Agent 自动化操作**能力。
 
@@ -11,13 +11,13 @@
 
 ## 简介
 
-Webmail 是一个具备完整邮件能力的 Web 邮件客户端，支持 IMAP 收件、SMTP 发件、通讯录管理、API 授权管理等功能。所有功能在单一页面内完成，左侧功能导航、右侧内容区动态切换。
+Minimail 是一个具备完整邮件能力的 Web 邮件客户端，支持 IMAP 收件、SMTP 发件、通讯录管理、API 授权管理等功能。所有功能在单一页面内完成，左侧功能导航、右侧内容区动态切换。
 
 ---
 
 ## AI Agent 集成
 
-Webmail 提供标准的 REST API，任何 AI 智能体（如 **OpenClaw**、**Hermes Agent**、**Claude Code**、**OpenAI GPT**、**DeepSeek** 等）可通过 **API 密钥** 直接操作邮件系统。
+Minimail 提供标准的 REST API，任何 AI 智能体（如 **OpenClaw**、**Hermes Agent**、**Claude Code**、**OpenAI GPT**、**DeepSeek** 等）可通过 **API 密钥** 直接操作邮件系统。
 
 ### 能力
 
@@ -31,7 +31,7 @@ Webmail 提供标准的 REST API，任何 AI 智能体（如 **OpenClaw**、**He
 
 ### 使用方式
 
-1. 登录 Webmail → 左侧 **🔑 API 密钥** → 新建密钥
+1. 登录 Minimail → 左侧 **🔑 API 密钥** → 新建密钥
 2. 复制生成的令牌（如 `wm_a3f8c2b1...`）
 3. 在 Agent 的 HTTP 请求的 Header 中添加：
 

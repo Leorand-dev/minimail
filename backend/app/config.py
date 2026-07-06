@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     )
 
     # ── 应用基础 ──
-    app_name: str = "Webmail"
+    app_name: str = "Minimail"
     app_version: str = "0.1.0"
     debug: bool = True
 
