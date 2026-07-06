@@ -11,6 +11,7 @@ import ContactsContent from '@/features/contacts/ContactsPage';
 import ApiKeysContent from '@/features/api-keys/ApiKeysPanel';
 import UserMenu from '@/features/user/UserMenu';
 import ProfilePanel from '@/features/user/ProfilePanel';
+import DocsPage from '@/features/docs/DocsPage';
 
 /** Header titles & actions for each view */
 const VIEW_CONFIG: Record<string, { title: string; icon: string }> = {
@@ -20,6 +21,7 @@ const VIEW_CONFIG: Record<string, { title: string; icon: string }> = {
   contacts: { title: '通讯录',    icon: '👤' },
   apikeys:  { title: 'API 密钥', icon: '🔑' },
   profile:  { title: '个人信息',  icon: '👤' },
+  docs:     { title: 'API 文档',  icon: '📄' },
 };
 
 export default function MailLayout() {
@@ -129,6 +131,7 @@ export default function MailLayout() {
         {activeView === 'contacts' && <ContactsContent onBack={() => setActiveView('mail')} />}
         {activeView === 'apikeys' && <ApiKeysContent />}
         {activeView === 'profile' && <ProfilePanel />}
+        {activeView === 'docs' && <DocsPage />}
       </div>
 
       {/* ═══ 底部导航 (手机) ═══ */}

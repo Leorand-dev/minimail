@@ -117,6 +117,7 @@ export default function FolderSidebar({ className = '', onSelectFolder }: Folder
           <NavItem icon="📥" label="收件箱" active={currentFolder === 'INBOX'} onClick={() => { setCurrentFolder('INBOX'); setActiveView('mail'); onSelectFolder?.(); }} />
           <NavItem icon="👤" label="通讯录" onClick={() => setActiveView('contacts')} />
           <NavItem icon="🔑" label="API 密钥" onClick={() => setActiveView('apikeys')} />
+          <NavItem icon="📄" label="API 文档" onClick={() => setActiveView('docs')} />
           <NavItem icon="⚙️" label="设置" onClick={() => setActiveView('settings')} />
         </div>
       </div>

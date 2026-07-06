@@ -3,7 +3,7 @@ import type { Folder, MessageSummary, MessageDetail } from '@/api/mail';
 
 export type Pane = 'folders' | 'list' | 'preview';
 /** 邮件页主视图 */
-export type MailView = 'mail' | 'compose' | 'settings' | 'contacts' | 'apikeys' | 'profile';
+export type MailView = 'mail' | 'compose' | 'settings' | 'contacts' | 'apikeys' | 'profile' | 'docs';
 
 /** 撰写页预填充数据 (回复/转发) */
 export interface ComposePrefill {
