@@ -31,13 +31,71 @@ Minimail 当前是一套完整的 Web 邮件系统（FastAPI + React），现需
 | **笔记 CRUD** | 创建、阅读、编辑、删除笔记 | P0 |
 | **Markdown 编辑** | 基于 TipTap 的 Markdown 编辑器，支持实时预览 | P0 |
 | **时间线布局** | 按创建时间倒序排列，卡片式展示 | P0 |
+| **AI Agent 笔记操作** | Agent 通过 API 进行笔记的创建/查询/搜索/摘要 | P0 |
+| **AI 笔记索引** | 笔记内容向量化，Agent 可检索作为上下文 | P0 |
 | **标签系统** | `#tag` 在 Markdown 中自动提取为标签，侧栏过滤 | P1 |
 | **搜索** | 全文搜索笔记标题+内容 | P1 |
 | **可见性控制** | Private / Public 两级可见性 | P1 |
 | **置顶** | 重要笔记置顶到列表顶部 | P1 |
 | **归档** | 软删除，可恢复 | P1 |
 
-### 2.2 扩展功能
+### 2.2 AI Agent 集成
+
+Agent（Hermes / Claude Code / OpenAI Codex 等）是笔记库的**首要用户之一**。Agent 通过 API 直接操作笔记，实现日常记录、上下文记忆、知识索引等场景。
+
+| Agent 场景 | 说明 | API |
+|-----------|------|-----|
+| **记录决策** | Agent 在工作过程中自动创建笔记记录技术决策 | `POST /api/notes` |
+| **查询笔记** | Agent 读取已有笔记获取上下文 | `GET /api/notes/{id}` |
+| **搜索知识** | Agent 全文搜索笔记库获取相关信息 | `GET /api/notes/search?q=` |
+| **更新进展** | Agent 更新任务/进度笔记 | `PUT /api/notes/{id}` |
+| **语义检索** | Agent 通过向量相似度检索最相关笔记 | `POST /api/notes/search/semantic` |
+| **自动摘要** | Agent 从对话/邮件中提取要点写入笔记 | `POST /api/notes/from-context` |
+| **标签管理** | Agent 整理和归档笔记标签 | `GET /api/notes/tags` |
+
+**认证方式**：Agent 使用现有的 API Token（`Authorization: Bearer <token>`），与用户手动操作共享同一权限模型。
+
+```bash
+# Agent 创建笔记示例
+curl -X POST https://minimail.dev/api/notes \
+  -H "Authorization: Bearer <agent-token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "# 2026-07-06 部署记录\n\n今天部署了 v0.12，包含:\n- IMAP 状态指示器\n- 富文本编辑器\n- 搜索增强",
+    "visibility": "private",
+    "tags": ["deploy", "v0.12"]
+  }'
+
+# Agent 语义搜索示例
+curl -X POST https://minimail.dev/api/notes/search/semantic \
+  -H "Authorization: Bearer <agent-token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "IMAP 连接配置方法",
+    "top_k": 5
+  }'
+```
+
+### 2.3 索引与检索
+
+笔记内容需要纳入 Agent 可检索的范围，方案分两个阶段：
+
+**Phase A — 基础全文检索（P0）**
+- 使用 PostgreSQL `tsvector` 全文索引
+- `to_tsvector('chinese', content)` 支持中文分词
+- Agent 通过 `GET /api/notes/search?q=` 检索
+
+**Phase B — 语义检索（P1）**
+- 接入 Minimail 后端 AI 推理端点（已有 `<llm-endpoint>`）
+- 笔记内容经过 embedding 模型转为向量
+- 使用 pgvector 扩展存储向量
+- Agent 通过 `POST /api/notes/search/semantic` 执行相似度搜索
+
+```
+用户提问 → Agent 收到 → 语义搜索笔记库 → 找到相关笔记 → 作为上下文 → 生成回答
+```
+
+### 2.4 扩展功能
 
 | 功能 | 说明 | 优先级 |
 |------|------|:------:|
@@ -47,9 +105,8 @@ Minimail 当前是一套完整的 Web 邮件系统（FastAPI + React），现需
 | **反应 (Reaction)** | Emoji 反应 | P2 |
 | **快捷键 (Shortcut)** | 保存过滤条件为快捷侧栏入口 | P2 |
 | **RSS Feed** | 公开笔记的 RSS 订阅 | P2 |
-| **AI 辅助** | 利用后端 AI Agent 能力做笔记摘要/扩写 | P2 |
 
-### 2.3 邮件集成特性
+### 2.5 邮件集成特性
 
 | 集成点 | 实现方式 |
 |--------|----------|
@@ -185,9 +242,14 @@ GET    /api/notes/tags           用户标签列表 (含计数)
 ──────────────────────────────────────────────────────────
 POST   /api/notes/{id}/reactions 添加/移除反应
 
-搜索
+搜索 (Agent 可用)
 ──────────────────────────────────────────────────────────
 GET    /api/notes/search?q=      全文搜索 (tsvector)
+POST   /api/notes/search/semantic  语义搜索 (pgvector, P1)
+
+Agent 专用
+──────────────────────────────────────────────────────────
+POST   /api/notes/from-context    从对话/邮件提取内容创建笔记
 ```
 
 ### 3.5 分页设计
@@ -350,7 +412,19 @@ Authorization: Bearer <api-token>
 | 标签路由 | GET /api/notes/tags |
 | 注册到 app.main | `app.include_router(memos.router, ...)` |
 
-### Phase 2 — 前端基础 (≈4h)
+### Phase 2 — AI Agent 集成 (≈4h)
+
+| 任务 | 产出 |
+|------|------|
+| API Token 认证中间件适配笔记路由 | 复用 `get_current_user` |
+| Agent 专用端点: `POST /api/notes/from-context` | 从文本提取关键信息创建笔记 |
+| 语义检索基础设施: 配置 AI embedding 端点 | `backend/app/services/embedding.py` |
+| 笔记内容向量化触发 (创建/更新时) | SQLAlchemy event + embedding 调用 |
+| pgvector 迁移 + 向量索引 | `CREATE INDEX ON notes USING ivfflat (embedding vector_cosine_ops)`  |
+| 语义搜索端点: `POST /api/notes/search/semantic` | 余弦相似度 top-k 检索 |
+| Agent 使用文档 + curl 示例 | `docs/agent-notes.md` |
+
+### Phase 3 — 前端基础 (≈4h)
 
 | 任务 | 产出 |
 |------|------|
@@ -361,7 +435,7 @@ Authorization: Bearer <api-token>
 | 路由集成: activeView='memos' + 侧栏入口 | MailLayout + FolderSidebar |
 | Markdown 渲染 (react-markdown) | MemoCard 内部 |
 
-### Phase 3 — 标签 + 搜索 + 可见性 (≈2h)
+### Phase 4 — 标签 + 搜索 + 可见性 (≈2h)
 
 | 任务 | 产出 |
 |------|------|
@@ -370,7 +444,7 @@ Authorization: Bearer <api-token>
 | 搜索 UI | 笔记内搜索框 |
 | 置顶/归档交互 | Pin icon + 归档菜单 |
 
-### Phase 4 — 邮件集成 (≈2h)
+### Phase 5 — 邮件集成 (≈2h)
 
 | 任务 | 产出 |
 |------|------|
@@ -378,7 +452,7 @@ Authorization: Bearer <api-token>
 | 自动提取邮件内容 → 笔记草稿 | 邮件→Markdown 转换 |
 | 统一搜索 Tab | Toolbar 搜索扩展 |
 
-### Phase 5 — 评论/反应 + @提及 (≈3h)
+### Phase 6 — 评论/反应 + @提及 (≈3h)
 
 | 任务 | 产出 |
 |------|------|
