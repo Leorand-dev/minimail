@@ -106,7 +106,7 @@ export default function PreviewPane({ className = '' }: PreviewPaneProps) {
             srcDoc={msg.text_html}
             className="w-full h-full border-0"
             title="邮件正文"
-            sandbox="allow-same-origin"
+            sandbox=""
           />
         ) : msg.text_plain ? (
           <pre className="text-sm text-gray-800 whitespace-pre-wrap font-sans leading-relaxed">

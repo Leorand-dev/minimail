@@ -20,10 +20,23 @@ export default function ComposePage({ onBack }: ComposePageProps) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
   const handleSend = async () => {
     if (!to.trim()) {
       setError('请输入收件人');
       toRef.current?.focus();
+      return;
+    }
+
+    const toList = to.split(',').map((s) => s.trim()).filter(Boolean);
+    const ccList = cc.split(',').map((s) => s.trim()).filter(Boolean);
+    const bccList = bcc.split(',').map((s) => s.trim()).filter(Boolean);
+
+    const allAddrs = [...toList, ...ccList, ...bccList];
+    const invalid = allAddrs.filter((a) => !EMAIL_RE.test(a));
+    if (invalid.length > 0) {
+      setError(`以下邮箱格式不正确: ${invalid.join(', ')}`);
       return;
     }
 
@@ -32,10 +45,6 @@ export default function ComposePage({ onBack }: ComposePageProps) {
     setSuccess('');
 
     try {
-      const toList = to.split(',').map((s) => s.trim()).filter(Boolean);
-      const ccList = cc.split(',').map((s) => s.trim()).filter(Boolean);
-      const bccList = bcc.split(',').map((s) => s.trim()).filter(Boolean);
-
       const payload: Record<string, unknown> = {
         to: toList,
         cc: ccList.length ? ccList : undefined,

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useMailStore } from '@/stores/mail';
-import { fetchMessageDetail } from '@/api/mail';
+import { fetchMessages, fetchMessageDetail, searchMessages as searchApi } from '@/api/mail';
 import type { MessageSummary } from '@/api/mail';
 import MessageRow from './MessageRow';
 
@@ -16,8 +16,12 @@ export default function MessageList({ className = '', onSelectMessage }: Message
   const selectedUid = useMailStore((s) => s.selectedUid);
   const setSelectedUid = useMailStore((s) => s.setSelectedUid);
   const setPreviewMessage = useMailStore((s) => s.setPreviewMessage);
-  const currentFolder = useMailStore((s) => s.currentFolder);
+  const setError = useMailStore((s) => s.setError);
+  const setMessages = useMailStore((s) => s.setMessages);
+  const setLoading = useMailStore((s) => s.setLoading);
+  const searchQuery = useMailStore((s) => s.searchQuery);
   const page = useMailStore((s) => s.page);
+  const currentFolder = useMailStore((s) => s.currentFolder);
   const totalPages = useMailStore((s) => s.totalPages);
   const totalMessages = useMailStore((s) => s.totalMessages);
   const setPage = useMailStore((s) => s.setPage);
@@ -29,14 +33,27 @@ export default function MessageList({ className = '', onSelectMessage }: Message
     try {
       const detail = await fetchMessageDetail(currentFolder, msg.uid);
       setPreviewMessage(detail);
-    } catch {
-      // fallback: show summary data
+    } catch (err) {
+      console.warn('加载邮件详情失败:', err);
     }
   };
 
-  const handleRefresh = () => {
-    // trigger reload via the store's loadMessages
-    window.dispatchEvent(new CustomEvent('mail-refresh'));
+  const handleRefresh = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      if (searchQuery.trim()) {
+        const res = await searchApi(searchQuery, currentFolder, page, 50);
+        setMessages(res.messages, res.total, res.page, res.total_pages);
+      } else {
+        const res = await fetchMessages(currentFolder, page, 50);
+        setMessages(res.messages, res.total, res.page, res.total_pages);
+      }
+    } catch {
+      setError('加载邮件失败');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (error) {
