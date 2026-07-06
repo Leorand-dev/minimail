@@ -62,48 +62,62 @@ interface MailState {
   setComposePrefill: (p: ComposePrefill | null) => void;
 }
 
-export const useMailStore = create<MailState>((set) => ({
-  folders: [],
-  accountFolders: [],
-  currentAccount: null,
-  currentFolder: 'INBOX',
-  messages: [],
-  totalMessages: 0,
-  page: 1,
-  totalPages: 1,
-  loading: false,
-  error: null,
-  searchQuery: '',
-  searchDateFrom: '',
-  searchDateTo: '',
-  searchUnreadOnly: false,
-  searchShowFilters: false,
-  activePane: 'list',
-  activeView: 'mail',
-  selectedMessage: null,
-  selectedUid: null,
-  previewMessage: null,
-  composePrefill: null,
+export const useMailStore = create<MailState>((set) => {
+  // 清除持久化可能残留的 loading 状态
+  try {
+    const raw = localStorage.getItem('webmail-mail-store');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed?.state?.loading === true) {
+        parsed.state.loading = false;
+        localStorage.setItem('webmail-mail-store', JSON.stringify(parsed));
+      }
+    }
+  } catch {}
 
-  setFolders: (folders) => set({ folders }),
-  setAccountFolders: (accountFolders) => set({ accountFolders }),
-  setCurrentAccount: (currentAccount) => set({ currentAccount, page: 1 }),
-  setMessages: (messages, total, page, totalPages) =>
-    set({ messages, totalMessages: total ?? 0, page: page ?? 1, totalPages: totalPages ?? 1 }),
-  setTotalMessages: (n) => set({ totalMessages: n }),
-  setCurrentFolder: (currentFolder) => set({ currentFolder, page: 1 }),
-  setPage: (page) => set({ page }),
-  setLoading: (loading) => set({ loading }),
-  setError: (error) => set({ error }),
-  setSearchQuery: (searchQuery) => set({ searchQuery, page: 1 }),
-  setSearchDateFrom: (searchDateFrom) => set({ searchDateFrom, page: 1 }),
-  setSearchDateTo: (searchDateTo) => set({ searchDateTo, page: 1 }),
-  setSearchUnreadOnly: (searchUnreadOnly) => set({ searchUnreadOnly, page: 1 }),
-  setSearchShowFilters: (searchShowFilters) => set({ searchShowFilters }),
-  setActivePane: (activePane) => set({ activePane }),
-  setActiveView: (activeView) => set({ activeView, selectedMessage: null, previewMessage: null }),
-  setSelectedMessage: (selectedMessage) => set({ selectedMessage }),
-  setSelectedUid: (selectedUid) => set({ selectedUid }),
-  setPreviewMessage: (previewMessage) => set({ previewMessage }),
-  setComposePrefill: (composePrefill) => set({ composePrefill }),
-}));
+  return {
+    folders: [],
+    accountFolders: [],
+    currentAccount: null,
+    currentFolder: 'INBOX',
+    messages: [],
+    totalMessages: 0,
+    page: 1,
+    totalPages: 1,
+    loading: false,
+    error: null,
+    searchQuery: '',
+    searchDateFrom: '',
+    searchDateTo: '',
+    searchUnreadOnly: false,
+    searchShowFilters: false,
+    activePane: 'list',
+    activeView: 'mail',
+    selectedMessage: null,
+    selectedUid: null,
+    previewMessage: null,
+    composePrefill: null,
+
+    setFolders: (folders) => set({ folders }),
+    setAccountFolders: (accountFolders) => set({ accountFolders }),
+    setCurrentAccount: (currentAccount) => set({ currentAccount, page: 1 }),
+    setMessages: (messages, total, page, totalPages) =>
+      set({ messages, totalMessages: total ?? 0, page: page ?? 1, totalPages: totalPages ?? 1 }),
+    setTotalMessages: (n) => set({ totalMessages: n }),
+    setCurrentFolder: (currentFolder) => set({ currentFolder, page: 1 }),
+    setPage: (page) => set({ page }),
+    setLoading: (loading) => set({ loading }),
+    setError: (error) => set({ error }),
+    setSearchQuery: (searchQuery) => set({ searchQuery, page: 1 }),
+    setSearchDateFrom: (searchDateFrom) => set({ searchDateFrom, page: 1 }),
+    setSearchDateTo: (searchDateTo) => set({ searchDateTo, page: 1 }),
+    setSearchUnreadOnly: (searchUnreadOnly) => set({ searchUnreadOnly, page: 1 }),
+    setSearchShowFilters: (searchShowFilters) => set({ searchShowFilters }),
+    setActivePane: (activePane) => set({ activePane }),
+    setActiveView: (activeView) => set({ activeView, selectedMessage: null, previewMessage: null }),
+    setSelectedMessage: (selectedMessage) => set({ selectedMessage }),
+    setSelectedUid: (selectedUid) => set({ selectedUid }),
+    setPreviewMessage: (previewMessage) => set({ previewMessage }),
+    setComposePrefill: (composePrefill) => set({ composePrefill }),
+  };
+});

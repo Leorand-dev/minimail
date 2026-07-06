@@ -46,11 +46,11 @@ export default function MailLayout() {
         setFolders(res.data.folders);
         setError(null);
         const folderMsgs = res.data.messages?.messages || [];
-        const folder = 'inbox';
         const filtered = folderMsgs;
         setMessages(filtered, filtered.length, 1, 1);
+        setLoading(false);
         demoLoaded = true;
-      } catch {}
+      } catch { setLoading(false); }
     })();
 
     // 再尝试真实 IMAP (设 3 秒超时)
