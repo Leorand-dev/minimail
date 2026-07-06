@@ -5,137 +5,121 @@ import FolderSidebar from '@/features/mail/components/FolderSidebar';
 import Toolbar from '@/features/mail/components/Toolbar';
 import MessageList from '@/features/mail/components/MessageList';
 import PreviewPane from '@/features/mail/components/PreviewPane';
-import ComposePanel from '@/features/compose/ComposePanel';
-import SettingsPanel from '@/features/settings/SettingsPanel';
-import ContactsPanel from '@/features/contacts/ContactsPanel';
-import ApiKeysPanel from '@/features/api-keys/ApiKeysPanel';
+import ComposeContent from '@/features/compose/ComposePage';
+import SettingsContent from '@/features/settings/SettingsPage';
+import ContactsContent from '@/features/contacts/ContactsPage';
+import ApiKeysContent from '@/features/api-keys/ApiKeysPanel';
+
+/** Header titles & actions for each view */
+const VIEW_CONFIG: Record<string, { title: string; icon: string }> = {
+  mail:     { title: '收件箱',    icon: '📥' },
+  compose:  { title: '写邮件',    icon: '✏️' },
+  settings: { title: '设置',      icon: '⚙️' },
+  contacts: { title: '通讯录',    icon: '👤' },
+  apikeys:  { title: 'API 密钥', icon: '🔑' },
+};
 
 export default function MailLayout() {
-  const {
-    currentFolder,
-    page,
-    searchQuery,
-    activeView,
-    setActiveView,
-    setFolders,
-    setMessages,
-    setLoading,
-    setError,
-    activePane,
-    setActivePane,
-    totalMessages,
-  } = useMailStore();
+  const { currentFolder, page, searchQuery, activeView, setActiveView,
+    setFolders, setMessages, setLoading, setError, activePane, setActivePane, totalMessages } = useMailStore();
 
   const initRef = useRef(false);
 
-  // 初始化: 加载文件夹
   useEffect(() => {
     if (initRef.current) return;
     initRef.current = true;
-    fetchFolders()
-      .then(setFolders)
-      .catch(() => setError('无法加载文件夹'));
+    fetchFolders().then(setFolders).catch(() => setError('无法加载文件夹'));
   }, [setFolders, setError]);
 
-  // 加载邮件列表
   const loadMessages = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      if (searchQuery.trim()) {
-        const res = await searchApi(searchQuery, currentFolder, page, 50);
-        setMessages(res.messages, res.total, res.page, res.total_pages);
-      } else {
-        const res = await fetchMessages(currentFolder, page, 50);
-        setMessages(res.messages, res.total, res.page, res.total_pages);
-      }
-    } catch {
-      setError('加载邮件失败');
-    } finally {
-      setLoading(false);
-    }
+      const res = searchQuery.trim()
+        ? await searchApi(searchQuery, currentFolder, page, 50)
+        : await fetchMessages(currentFolder, page, 50);
+      setMessages(res.messages, res.total, res.page, res.total_pages);
+    } catch { setError('加载邮件失败'); }
+    finally { setLoading(false); }
   }, [currentFolder, page, searchQuery, setMessages, setLoading, setError]);
 
-  useEffect(() => {
-    if (activeView === 'mail') loadMessages();
-  }, [loadMessages, activeView]);
+  useEffect(() => { if (activeView === 'mail') loadMessages(); }, [loadMessages, activeView]);
+
+  const cfg = VIEW_CONFIG[activeView] || VIEW_CONFIG.mail;
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-white text-sm">
-      {/* ═══ 顶部工具栏 (只有邮件视图显示) ═══ */}
-      {activeView === 'mail' && <Toolbar />}
+      {/* ═══ 统一顶部 Header ═══ */}
+      {activeView === 'mail' ? (
+        <Toolbar />
+      ) : (
+        <header className="flex items-center gap-2 px-3 py-2 border-b border-gray-200 bg-white">
+          <button
+            onClick={() => setActiveView('mail')}
+            className="flex items-center gap-1.5 text-gray-500 hover:text-[#066da5] transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            <span className="text-sm">返回</span>
+          </button>
+          <span className="text-sm font-semibold text-gray-700 ml-1">
+            {cfg.icon} {cfg.title}
+          </span>
+          <div className="flex-1" />
+          {/* Contextual action buttons */}
+          {(activeView === 'contacts' || activeView === 'apikeys') && (
+            <button
+              onClick={() => {
+                // Dispatch a custom event the panel listens to
+                window.dispatchEvent(new CustomEvent('panel-new'));
+              }}
+              className="px-3 py-1.5 text-xs text-white bg-[#066da5] rounded hover:bg-[#05588a] transition-colors"
+            >
+              + 新建
+            </button>
+          )}
+          {activeView === 'compose' && (
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent('compose-send'))}
+              className="px-4 py-1.5 text-xs text-white bg-[#066da5] rounded hover:bg-[#05588a] transition-colors font-medium"
+            >
+              发送
+            </button>
+          )}
+        </header>
+      )}
 
       {/* ═══ 三栏主体 ═══ */}
       <div className="flex flex-1 overflow-hidden">
-        {/* 左侧: 文件夹树 (始终显示) */}
         <FolderSidebar
-          className={
-            activeView !== 'mail'
-              ? 'hidden lg:block lg:w-56'
-              : activePane === 'folders'
-                ? 'block'
-                : 'hidden lg:block'
-          }
+          className={activeView !== 'mail' ? 'hidden lg:block lg:w-56' : activePane === 'folders' ? 'block' : 'hidden lg:block'}
           onSelectFolder={() => setActivePane('list')}
         />
 
-        {/* 内容区: 根据 activeView 切换 */}
         {activeView === 'mail' && (
           <>
-            {/* 中间: 邮件列表 */}
-            <MessageList
-              className={
-                activePane === 'list'
-                  ? 'flex flex-col flex-1'
-                  : 'hidden lg:flex lg:flex-col lg:flex-1'
-              }
-              onSelectMessage={() => setActivePane('preview')}
-            />
-
-            {/* 右侧: 预览面板 */}
-            <PreviewPane
-              className={
-                activePane === 'preview'
-                  ? 'block flex-1'
-                  : 'hidden lg:block lg:flex-1'
-              }
-            />
+            <MessageList className={activePane === 'list' ? 'flex flex-col flex-1' : 'hidden lg:flex lg:flex-col lg:flex-1'} onSelectMessage={() => setActivePane('preview')} />
+            <PreviewPane className={activePane === 'preview' ? 'block flex-1' : 'hidden lg:block lg:flex-1'} />
           </>
         )}
 
-        {activeView === 'compose' && <ComposePanel />}
-        {activeView === 'settings' && <SettingsPanel />}
-        {activeView === 'contacts' && <ContactsPanel />}
-        {activeView === 'apikeys' && <ApiKeysPanel />}
+        {activeView === 'compose' && <ComposeContent onBack={() => setActiveView('mail')} />}
+        {activeView === 'settings' && <SettingsContent onBack={() => setActiveView('mail')} />}
+        {activeView === 'contacts' && <ContactsContent onBack={() => setActiveView('mail')} />}
+        {activeView === 'apikeys' && <ApiKeysContent />}
       </div>
 
-      {/* ═══ 响应式底部导航 (phone/small 屏幕) ═══ */}
+      {/* ═══ 底部导航 (手机) ═══ */}
       {activeView === 'mail' && (
         <div className="flex border-t border-gray-200 lg:hidden">
-          <button
-            onClick={() => setActivePane('folders')}
-            className={`flex-1 py-2 text-xs font-medium text-center ${
-              activePane === 'folders' ? 'text-[#066da5] bg-[#e8f4fd]' : 'text-gray-500'
-            }`}
-          >
-            📁 文件夹
-          </button>
-          <button
-            onClick={() => setActivePane('list')}
-            className={`flex-1 py-2 text-xs font-medium text-center ${
-              activePane === 'list' ? 'text-[#066da5] bg-[#e8f4fd]' : 'text-gray-500'
-            }`}
-          >
-            ✉️ 邮件 ({totalMessages})
-          </button>
-          <button
-            onClick={() => setActivePane('preview')}
-            className={`flex-1 py-2 text-xs font-medium text-center ${
-              activePane === 'preview' ? 'text-[#066da5] bg-[#e8f4fd]' : 'text-gray-500'
-            }`}
-          >
-            👁️ 预览
-          </button>
+          {(['folders', 'list', 'preview'] as const).map((pane) => (
+            <button key={pane} onClick={() => setActivePane(pane)}
+              className={`flex-1 py-2 text-xs font-medium text-center ${activePane === pane ? 'text-[#066da5] bg-[#e8f4fd]' : 'text-gray-500'}`}
+            >
+              {pane === 'folders' ? '📁 文件夹' : pane === 'list' ? `✉️ 邮件 (${totalMessages})` : '👁️ 预览'}
+            </button>
+          ))}
         </div>
       )}
     </div>
