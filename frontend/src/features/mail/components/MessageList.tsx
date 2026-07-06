@@ -57,16 +57,16 @@ export default function MessageList({ className = '', onSelectMessage }: Message
   };
 
   if (error) {
-    const isConfigError = error.includes('配置') || error.includes('IMAP') || error.includes('连接');
+    const isConfigError = error === '请添加邮件账户';
     return (
       <div className={`${className} items-center justify-center text-gray-400`}>
         <div className="text-center max-w-xs">
           <div className="text-3xl mb-3">{isConfigError ? '📭' : '⚠️'}</div>
-          <p className="mb-1 text-gray-500">{isConfigError ? '邮箱尚未配置' : error}</p>
+          <p className="mb-1 text-gray-500">{isConfigError ? '邮箱尚未配置' : '连接失败'}</p>
           <p className="mb-3 text-xs text-gray-400">
             {isConfigError
-              ? '请先到设置页面配置 IMAP/SMTP 邮箱账户'
-              : '请检查网络连接后重试'}
+              ? '请先添加邮箱账户'
+              : '请检查网络或者邮件账户设置'}
           </p>
           <div className="flex gap-2 justify-center">
             {isConfigError && (

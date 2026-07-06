@@ -28,7 +28,22 @@ export default function MailLayout() {
   useEffect(() => {
     if (initRef.current) return;
     initRef.current = true;
-    fetchFolders().then(setFolders).catch(() => setError('无法加载文件夹'));
+    fetchFolders()
+      .then(setFolders)
+      .catch(async () => {
+        // 检查是否有邮箱账户
+        try {
+          const { fetchAccounts } = await import('@/api/accounts');
+          const accounts = await fetchAccounts();
+          if (accounts.length === 0) {
+            setError('请添加邮件账户');
+          } else {
+            setError('加载失败，请检查网络或者邮件账户设置');
+          }
+        } catch {
+          setError('加载失败，请检查网络或者邮件账户设置');
+        }
+      });
   }, [setFolders, setError]);
 
   const loadMessages = useCallback(async () => {
