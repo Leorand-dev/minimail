@@ -39,30 +39,20 @@ export default function MailLayout() {
       try {
         const res = await api.get('/mail/demo');
         setFolders(res.data.folders);
-        // 延迟触发 demo messages 加载
+        setError(null);
+        // 加载 demo 邮件
         setLoading(true);
+        const folderMsgs = res.data.messages?.messages || [];
+        setMessages(folderMsgs, folderMsgs.length, 1, 1);
+        setLoading(false);
         return res.data;
-      } catch { return null; }
+      } catch { setError('加载示例数据失败'); return null; }
     };
     fetchFolders()
       .then(setFolders)
       .catch(async () => {
-        // 检查是否有邮箱账户
-        try {
-          const { fetchAccounts } = await import('@/api/accounts');
-          const accounts = await fetchAccounts();
-          if (accounts.length === 0) {
-            // 无账户 — 跳过 IMAP 直接加载示例数据
-            tryDemoData();
-          } else {
-            setError('加载失败，请检查网络或者邮件账户设置');
-            // 有账户但连接失败 — 尝试用示例数据展示
-            tryDemoData();
-          }
-        } catch {
-          // 账户 API 也失败 — 尝试示例数据
-          tryDemoData();
-        }
+        // IMAP 失败 — 跳过账户检查直接加载示例数据
+        await tryDemoData();
       });
   }, [setFolders, setError, setLoading]);
 
