@@ -89,6 +89,7 @@ export default function MessageList({ className = '', onSelectMessage }: Message
         // 标记本地消息为已读
         if (!msg.is_read) {
           useMailStore.getState().addReadUid(msg.uid);
+          useMailStore.getState().decrementFolderUnseen(currentFolder);
           const currentMsgs = useMailStore.getState().messages;
           const updated = currentMsgs.map((m) =>
             m.uid === msg.uid ? { ...m, is_read: true, flags: [...(m.flags || []), '\\Seen'] } : m

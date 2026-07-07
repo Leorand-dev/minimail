@@ -43,6 +43,7 @@ interface MailState {
   conversationMode: boolean;
 
   setFolders: (folders: Folder[]) => void;
+  decrementFolderUnseen: (folderName: string) => void;
   setAccountFolders: (acc: AccountFolderGroup[]) => void;
   setCurrentAccount: (id: string | null) => void;
   setCurrentFolder: (f: string) => void;
@@ -94,6 +95,22 @@ export const useMailStore = create<MailState>()((set) => {
     conversationMode: false,
 
     setFolders: (folders) => set({ folders }),
+    decrementFolderUnseen: (folderName: string) => set((s) => {
+      const updated = s.folders.map((f) =>
+        f.name === folderName && f.unseen > 0
+          ? { ...f, unseen: f.unseen - 1 }
+          : f
+      );
+      const accUpdated = s.accountFolders.map((g) => ({
+        ...g,
+        folders: g.folders.map((f) =>
+          f.name === folderName && f.unseen > 0
+            ? { ...f, unseen: f.unseen - 1 }
+            : f
+        ),
+      }));
+      return { folders: updated, accountFolders: accUpdated };
+    }),
     setAccountFolders: (accountFolders) => set({ accountFolders }),
     setCurrentAccount: (currentAccount) => set({ currentAccount, page: 1 }),
     setMessages: (messages, total, page, totalPages) =>
