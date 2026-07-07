@@ -10,3 +10,4 @@
 | [👤 通讯录](contacts.md) | 联系人与分组管理 |
 | [⚙️ 设置](settings.md) | 邮箱配置、个人设置 |
 | [🤖 AI Agent](agent.md) | API 密钥、Agent 对接、自动化操作 |
+| [🚀 部署指南](deployment.md) | 开发环境/生产部署/Docker/Nginx/SSL/备份 |

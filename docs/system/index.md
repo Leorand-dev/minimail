@@ -20,6 +20,7 @@
 | 写笔记 → 管理标签 | [笔记库 →](operations/notes.md) |
 | 管理通讯录 → 联系人分组 | [通讯录 →](operations/contacts.md) |
 | 创建 API 密钥 → 对接 Agent | [AI Agent →](operations/agent.md) |
+| 部署 Minimail → 生产环境 | [部署指南 →](operations/deployment.md) |
 | 查看全部 API 端点 | [API 概览 →](api/index.md) |
 
 ## 📌 项目信息
