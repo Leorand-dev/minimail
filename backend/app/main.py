@@ -6,8 +6,9 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.database import close_db, init_db
@@ -32,6 +33,41 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan,
 )
+
+# ── 统一错误处理 ──
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """全局异常处理器 — 返回统一格式的错误响应."""
+    import logging
+
+    logger = logging.getLogger("webmail.error")
+
+    # FastAPI HTTPException 直接透传
+    if isinstance(exc, HTTPException):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail, "code": exc.status_code},
+        )
+
+    # Pydantic 验证错误
+    if hasattr(exc, "errors"):
+        return JSONResponse(
+            status_code=422,
+            content={
+                "detail": "请求数据验证失败",
+                "code": 422,
+                "errors": exc.errors() if hasattr(exc, "errors") else [],
+            },
+        )
+
+    # 未捕获异常 → 500
+    logger.exception("Unhandled exception: %s", exc)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "服务器内部错误", "code": 500},
+    )
 
 # CORS
 app.add_middleware(

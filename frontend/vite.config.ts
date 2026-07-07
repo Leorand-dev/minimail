@@ -36,4 +36,20 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom', 'zustand', 'axios'],
+          editor: [
+            '@tiptap/react',
+            '@tiptap/starter-kit',
+            '@tiptap/extension-placeholder',
+            '@tiptap/extension-text-align',
+            '@tiptap/extension-underline',
+          ],
+        },
+      },
+    },
+  },
 });
