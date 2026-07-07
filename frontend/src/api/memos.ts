@@ -13,12 +13,19 @@ export interface Note {
   user_id: string;
   content: string;
   visibility: 'private' | 'public';
-  pinned: boolean;
-  parent_id: string | null;
-  row_status: 'active' | 'archived';
+  pinned?: boolean;
+  parent_id?: string | null;
+  row_status?: string;
   tags: string[];
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
+  reactions?: NoteReaction[];
+}
+
+export interface NoteReaction {
+  emoji: string;
+  count: number;
+  reacted: boolean;
 }
 
 export interface NoteCreate {
@@ -165,5 +172,16 @@ export async function createNoteFromEmail(params: {
   tags?: string[];
 }): Promise<Note> {
   const res = await api.post('/notes/from-email', params);
+  return res.data;
+}
+
+/** 切换笔记反应 (添加/移除 Emoji) */
+export async function toggleReaction(
+  noteId: string,
+  emoji: string
+): Promise<Note> {
+  const res = await api.post(`/notes/${noteId}/reactions`, null, {
+    params: { emoji },
+  });
   return res.data;
 }

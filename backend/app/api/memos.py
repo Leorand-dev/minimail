@@ -39,7 +39,9 @@ from app.schemas.note import (
     FromContextRequest,
     NoteCreate,
     NoteListResponse,
+    NoteReactionResponse,
     NoteResponse,
+    NoteResponseWithReactions,
     NoteTagCreate,
     NoteTagRename,
     NoteTagResponse,
@@ -51,7 +53,7 @@ from app.schemas.note import (
 from app.services.auth import get_current_user
 
 # 引入 ORM 模型
-from app.models.note import Note as NoteModel, NoteTag as NoteTagModel
+from app.models.note import Note as NoteModel, NoteTag as NoteTagModel, NoteReaction as NoteReactionModel
 
 router = APIRouter(prefix="/api/notes", tags=["notes"])
 
@@ -137,8 +139,11 @@ async def list_notes(
     total_result = await db.execute(count_q)
     total = total_result.scalar() or 0
 
+    # 批量获取反应
+    reactions_map = await _batch_get_reactions(db, [n.id for n in notes], user.id)
+
     return NoteListResponse(
-        notes=[NoteResponse.model_validate(n) for n in notes],
+        notes=[_note_with_reactions(n, reactions_map.get(n.id, [])) for n in notes],
         next_page_token=next_token,
         total=total,
     )
@@ -377,15 +382,16 @@ async def search_notes(
     )
 
 
-@router.get("/{note_id}", response_model=NoteResponse)
+@router.get("/{note_id}", response_model=NoteResponseWithReactions)
 async def get_note(
     note_id: uuid.UUID = Path(...),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """获取单条笔记详情."""
+    """获取单条笔记详情 (含反应)."""
     note = await _get_note_or_404(note_id, user, db)
-    return NoteResponse.model_validate(note)
+    reactions = await _get_reactions_for_note(db, note_id, user.id)
+    return _note_with_reactions(note, reactions)
 
 
 # ─── 更新 ───
@@ -566,7 +572,48 @@ async def create_from_context(
     return NoteResponse.model_validate(note)
 
 
-@router.post("/from-email", response_model=NoteResponse, status_code=201)
+@router.post("/{note_id}/reactions", response_model=NoteResponseWithReactions)
+async def toggle_reaction(
+    emoji: str = Query(..., min_length=1, max_length=32, description="Emoji 字符"),
+    note_id: uuid.UUID = Path(...),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """切换笔记反应 — 添加或移除 Emoji.
+
+    如果用户已对该笔记使用此 Emoji → 移除 (取消反应)
+    如果未使用 → 添加
+    """
+    note = await _get_note_or_404(note_id, user, db)
+
+    result = await db.execute(
+        select(NoteReactionModel).where(
+            NoteReactionModel.note_id == note_id,
+            NoteReactionModel.user_id == user.id,
+            NoteReactionModel.emoji == emoji,
+        )
+    )
+    existing = result.scalar_one_or_none()
+
+    if existing:
+        await db.delete(existing)
+    else:
+        reaction = NoteReactionModel(
+            note_id=note_id,
+            user_id=user.id,
+            emoji=emoji,
+        )
+        db.add(reaction)
+
+    await db.flush()
+    await db.refresh(note)
+
+    # Rebuild reactions for response
+    reactions = await _get_reactions_for_note(db, note_id, user.id)
+    return _note_with_reactions(note, reactions)
+
+
+@router.post("/{note_id}/from-email", response_model=NoteResponse, status_code=201)
 async def create_note_from_email(
     body: CreateNoteFromEmailRequest,
     user: User = Depends(get_current_user),
@@ -624,3 +671,75 @@ async def _upsert_tag_count(
     elif delta > 0:
         db.add(NoteTagModel(name=tag_name, user_id=user_id, note_count=1))
     await db.flush()
+
+
+async def _get_reactions_for_note(
+    db: AsyncSession, note_id: uuid.UUID, current_user_id: uuid.UUID
+) -> list[NoteReactionResponse]:
+    """聚合笔记的反应，统计每个 emoji 的计数和当前用户是否已反应."""
+    result = await db.execute(
+        select(NoteReactionModel).where(NoteReactionModel.note_id == note_id)
+    )
+    rows = result.scalars().all()
+
+    from collections import Counter
+
+    emoji_counts = Counter(r.emoji for r in rows)
+    user_emojis = {r.emoji for r in rows if r.user_id == current_user_id}
+
+    return [
+        NoteReactionResponse(emoji=e, count=c, reacted=e in user_emojis)
+        for e, c in sorted(emoji_counts.items())
+    ]
+
+
+async def _batch_get_reactions(
+    db: AsyncSession, note_ids: list[uuid.UUID], current_user_id: uuid.UUID
+) -> dict[uuid.UUID, list[NoteReactionResponse]]:
+    """批量获取多条笔记的反应."""
+    if not note_ids:
+        return {}
+
+    result = await db.execute(
+        select(NoteReactionModel).where(NoteReactionModel.note_id.in_(note_ids))
+    )
+    rows = result.scalars().all()
+
+    from collections import defaultdict, Counter
+
+    # Group by note_id
+    by_note: dict[uuid.UUID, list[NoteReactionModel]] = defaultdict(list)
+    for r in rows:
+        by_note[r.note_id].append(r)
+
+    result_map: dict[uuid.UUID, list[NoteReactionResponse]] = {}
+    for nid in note_ids:
+        note_reactions = by_note.get(nid, [])
+        emoji_counts = Counter(r.emoji for r in note_reactions)
+        user_emojis = {r.emoji for r in note_reactions if r.user_id == current_user_id}
+        result_map[nid] = [
+            NoteReactionResponse(emoji=e, count=c, reacted=e in user_emojis)
+            for e, c in sorted(emoji_counts.items())
+        ]
+
+    return result_map
+
+
+def _note_with_reactions(
+    note: NoteModel, reactions: list[NoteReactionResponse]
+) -> NoteResponseWithReactions:
+    """为笔记添加反应数据."""
+    base = NoteResponse.model_validate(note)
+    return NoteResponseWithReactions(
+        id=base.id,
+        user_id=base.user_id,
+        content=base.content,
+        visibility=base.visibility,
+        pinned=base.pinned,
+        parent_id=base.parent_id,
+        row_status=base.row_status,
+        tags=base.tags,
+        created_at=base.created_at,
+        updated_at=base.updated_at,
+        reactions=reactions,
+    )

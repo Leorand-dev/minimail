@@ -11,6 +11,14 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 
+class NoteReactionResponse(BaseModel):
+    """笔记反应."""
+
+    emoji: str
+    count: int = 1
+    reacted: bool = False
+
+
 class NoteResponse(BaseModel):
     """笔记响应."""
 
@@ -25,7 +33,25 @@ class NoteResponse(BaseModel):
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
-    model_config = {"from_attributes": True}
+    model_config = {"from_attributes": True}  # type: ignore[arg-type]
+
+
+class NoteResponseWithReactions(BaseModel):
+    """笔记响应 (含反应)."""
+
+    id: uuid.UUID
+    user_id: uuid.UUID
+    content: str
+    visibility: str = "private"
+    pinned: bool = False
+    parent_id: uuid.UUID | None = None
+    row_status: str = "active"
+    tags: list[str] = []
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    reactions: list[NoteReactionResponse] = []
+
+    model_config = {"from_attributes": True}  # type: ignore[arg-type]
 
 
 class NoteCreate(BaseModel):
@@ -53,7 +79,6 @@ class NoteListResponse(BaseModel):
 
     notes: list[NoteResponse]
     next_page_token: str | None = None
-    total: int = 0
 
 
 class NoteTagResponse(BaseModel):
@@ -73,6 +98,18 @@ class NoteTagRename(BaseModel):
     """重命名标签."""
 
     new_name: str = Field(..., min_length=1, max_length=64)
+
+
+class CreateNoteFromEmailRequest(BaseModel):
+    """从邮件创建笔记 — 前端传入邮件内容."""
+
+    subject: str = Field(default="", max_length=512)
+    sender: str = Field(default="", max_length=256)
+    body: str = Field(default="", max_length=65536)
+    date: str = Field(default="")
+    folder: str = Field(default="INBOX")
+    uid: int | None = Field(default=None)
+    tags: list[str] = Field(default_factory=lambda: ["email"])
 
 
 class SemanticSearchRequest(BaseModel):
@@ -112,18 +149,6 @@ class FromContextRequest(BaseModel):
     )
 
 
-class CreateNoteFromEmailRequest(BaseModel):
-    """从邮件创建笔记 — 前端传入邮件内容."""
-
-    subject: str = Field(default="", max_length=512)
-    sender: str = Field(default="", max_length=256)
-    body: str = Field(default="", max_length=65536)
-    date: str = Field(default="")
-    folder: str = Field(default="INBOX")
-    uid: int | None = Field(default=None)
-    tags: list[str] = Field(default_factory=lambda: ["email"])
-
-
 class UnifiedSearchItem(BaseModel):
     """统一搜索结果条目."""
 
@@ -144,14 +169,3 @@ class UnifiedSearchResponse(BaseModel):
     results: list[UnifiedSearchItem]
     total: int
     query: str
-
-
-class NoteSearchQuery(BaseModel):
-
-    """搜索参数 (GET query)."""
-
-    q: str = Field(default="", description="全文搜索关键词")
-    tag: str | None = Field(default=None, description="按标签过滤")
-    visibility: str | None = Field(default=None, description="可见性过滤")
-    page_size: int = Field(default=20, ge=1, le=100)
-    cursor: str | None = Field(default=None, description="游标 (上一页最后一条的 created_at)")
