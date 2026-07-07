@@ -160,6 +160,8 @@ npx vite --host 0.0.0.0 --port 5173
 
 访问 **http://localhost:5173** → 注册账号 → 开始使用。
 
+> 📖 详细部署说明（生产环境、Docker、Nginx、SSL）：**[🚀 部署指南](docs/system/operations/deployment.md)**
+
 ---
 
 ## 🧰 技术栈
