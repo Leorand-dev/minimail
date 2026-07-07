@@ -53,6 +53,14 @@ cd minimail
 ```bash
 cp backend/.env.example backend/.env
 # 按需修改 .env 中的配置
+
+# Docker 部署使用单独 .env 文件
+cp docker/.env.example docker/.env 2>/dev/null || cat > docker/.env << EOF
+DB_PASSWORD=your_strong_password
+SECRET_KEY=$(openssl rand -hex 32)
+ENCRYPTION_KEY=$(openssl rand -base64 32 | cut -c1-32)
+DOMAIN=localhost
+EOF
 ```
 
 关键配置项（详见[环境变量](#4-环境变量)）：
@@ -396,16 +404,13 @@ volumes:
 ### 7.2 构建并启动
 
 ```bash
-# 创建 .env 文件
-cat > .env << EOF
-DB_PASSWORD=your_strong_password
-SECRET_KEY=$(openssl rand -hex 32)
-ENCRYPTION_KEY=$(openssl rand -base64 32 | cut -c1-32)
-DOMAIN=minimail.example.com
-EOF
+# 创建 .env 文件 (从模板)
+cp docker/.env.example docker/.env
+# 编辑 docker/.env 填入 SECRET_KEY 和 ENCRYPTION_KEY
 
-docker compose up -d
-docker compose exec backend alembic upgrade head
+docker compose -f docker/docker-compose.yml up -d
+# 等待数据库就绪后, 手动执行迁移:
+docker compose -f docker/docker-compose.yml exec backend alembic upgrade head
 ```
 
 ---
