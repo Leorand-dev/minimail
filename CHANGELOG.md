@@ -7,24 +7,56 @@
 
 ---
 
-## 0.12 — 2026-07-06
+## 0.12 — 2026-07-07
 
 ### 新增
-- **IMAP 状态指示器**: 侧栏底部显示连接状态（🟢 已连接/🔴 未连接）、最后同步时间、手动刷新按钮
-- **富文本编辑器**: 写邮件正文替换为 TipTap/ProseMirror 编辑器，支持加粗/斜体/下划线/删除线、标题 H1-H3、无序/有序列表、对齐、引用、代码块、撤销/重做
-- **HTML 邮件发送**: 后端支持 `MIMEMultipart("alternative")`，富文本自动打包 HTML + 纯文本双版
+
+#### 📝 笔记库 (全面对齐 Memos)
+- **笔记 CRUD**: Phase 1 数据库 (Note/NoteTag/NoteReaction) + CRUD API + Alembic 迁移
+- **前端笔记库**: Phase 3 MemosPage/MemoList/MemoCard/MemoEditor + Zustand store
+- **标签系统**: 后端 CRUD + 前端 TagsManager，支持创建/重命名/删除 + 自动从 `#tag` 语法提取
+- **全文搜索**: PostgreSQL tsvector + GIN 索引，支持关键词/标签/可见性过滤
+- **语义搜索**: Phase 2 pgvector + ivfflat 索引，外部 AI Agent 传入 embedding 进行余弦相似度搜索
+- **AI Agent 集成**: `from-context` 端点 (文本/会议纪要自动创建笔记)，Agent 专用 API
+- **邮件→笔记**: `from-email` 端点 + 预览面板「转为笔记」按钮，自动格式化 Markdown + 标签 `email`
+- **统一搜索**: `GET /api/search` 跨 notes + mail.messages 表 tsquery 搜索
+- **置顶/归档**: 笔记置顶切换 + 软删除/恢复
+- **反应 (Reaction)**: 切换式 Emoji 点赞 API (👍❤️🎉)，乐观更新 UI
+- **评论/线程**: 基于 parent_id 的评论系统 (表已建 + API + 前端评论区)
+- **附件上传**: NoteAttachment 模型 + 文件上传/下载端点 + 拖拽上传 UI
+- **链接元数据**: `POST /notes/link-metadata` OG 元数据抓取 (httpx + BeautifulSoup4)
+- **内容属性**: has_link/has_code/has_task_list/title 运行时计算，响应中返回 property 字段
+- **PROTECTED 可见性**: 三级 (private/protected/public)
+- **公开分享链接**: 分享 token 生成 + 无认证解析，设置面板全局开关
+- **快捷键**: 保存过滤条件快捷入口，侧栏 + 设置面板管理
+- **SSE 实时同步**: sse-starlette EventSource，笔记变更即时推送
+- **Webhook**: 事件通知 (note.created/updated/deleted) + HMAC-SHA256 签名
+
+#### 📧 邮件系统体验
+- **多账户发件人选择**: 撰写页发件人下拉框，自动加载邮箱账户列表，发送带 account_id
+- **邮箱设置向导**: `GET /api/settings/mail/auto-detect`，20+ 服务商预设 (Gmail/QQ/163/126/Outlook/iCloud/Yahoo/阿里云等) + MX 记录匹配 + 通用猜测
+- **会话模式 (Conversation View)**: 按主题分组 (Re/Fwd/回复/转发 标准化)，可展开会话树，IMAP 超时回退 demo 数据
+
+#### 📚 系统文档
+- **系统文档子项目**: 操作说明 7 篇 + API 参考 7 篇 + 入口索引，Markdown→HTML 渲染
+- **DocsPage 查看器**: 左侧导航树 + 右侧 HTML 渲染 (dangerouslySetInnerHTML)
 
 ### 改进
-- 写邮件页发送 `html_body` 和 `text_body` 双格式
-
-### 修复
-- **API 调用路径双 `/api/` 前缀**: axios baseURL `/api` 导致所有请求路径如 `/api/auth/me` 实际请求 `//api/...`（34 处修复，影响所有 API 功能）
-- **LoginRequest 邮箱格式限制**: `EmailStr` 改为 `str`，现在支持用户名直接登录
-- **个人信息修改无法更新用户名**: `UpdateProfileRequest` 新增 `username` 字段，后端关联更新
+- **全量 UI 美化**: 统一 55px Header，侧栏 rounded-lg + shadow-sm，消息行选中 3px 蓝左边框，笔记卡片 hover shadow-sm
+- **前端分包优化**: vendor (96 kB) + editor (412 kB) + app (430 kB)，chunk 警告消除
+- **后端统一错误处理**: 全局 Exception handler (HTTPException 透传 / ValidationError 422 / 500 日志)
+- **侧栏重构**: 笔记库从 NavItem 移出为独立可折叠分区
+- **Git 历史脱敏**: filter-branch 清理 30 commits + force push
 
 ### 文档
-- 侧栏新增「📄 API 文档」入口，内嵌 ReDoc（后改为新窗口打开）
-- API 文档审计：修复 34 路由摘要/描述，项目名 Webmail → Minimail
+- **API 文档完善**: notes.md 从 12→25+ 端点，index.md 更新 (~70 端点)
+- **系统文档**: docs/system/ 完整结构 + 后端 HTML 服务
+- **开发文档**: _devdocs/ 21 篇开发记录 (gitignored)
+
+### 修复
+- **API 调用路径双 `/api/` 前缀**: axios baseURL `/api` 路径对齐
+- **LoginRequest 邮箱格式**: EmailStr → str，支持用户名登录
+- **Lazy loading greenlet 错误**: 所有 NoteResponse 改为手动构造，避免 SQLAlchemy async 懒加载
 
 ---
 
