@@ -4,6 +4,8 @@ import { useMailStore } from '@/stores/mail';
 import api from '@/api/client';
 import AutocompleteInput from './AutocompleteInput';
 import RichTextEditor from './RichTextEditor';
+import { fetchAccounts } from '@/api/accounts';
+import type { EmailAccount } from '@/api/accounts';
 
 interface ComposePageProps {
   onBack?: () => void;
@@ -22,6 +24,8 @@ export default function ComposePage({ onBack }: ComposePageProps) {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [accounts, setAccounts] = useState<EmailAccount[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
 
   // Listen for compose-send event from parent header
   const handleSendRef = useRef<() => void>(() => {});
@@ -48,6 +52,10 @@ export default function ComposePage({ onBack }: ComposePageProps) {
       setComposePrefill(null);
     }
   }, [composePrefill, setComposePrefill]);
+
+  useEffect(() => {
+    fetchAccounts().then(setAccounts).catch(() => {});
+  }, []);
 
   const handleSend = async () => {
     if (!to.trim()) {
@@ -81,6 +89,7 @@ export default function ComposePage({ onBack }: ComposePageProps) {
         html_body: htmlBody || undefined,
       };
       if (from.trim()) payload.from_addr = from.trim();
+      if (selectedAccountId) payload.account_id = selectedAccountId;
 
       await api.post('/mail/send', payload);
 
@@ -134,15 +143,26 @@ export default function ComposePage({ onBack }: ComposePageProps) {
       {/* Form fields */}
       <div className="flex-1">
         {/* 发件人 */}
-        <div className="flex items-center border-b border-gray-200">
-          <label className="w-16 flex-shrink-0 px-3 text-xs font-medium text-gray-500">发件人</label>
-          <input
-            type="text"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-            placeholder="your@email.com"
-            className="flex-1 px-2 py-2.5 text-sm border-0 outline-none text-gray-500"
-          />
+        <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-100">
+          <span className="text-xs text-gray-400 w-12 shrink-0">发件人</span>
+          <select
+            value={selectedAccountId || ''}
+            onChange={(e) => {
+              const acc = accounts.find(a => a.id === e.target.value);
+              if (acc) {
+                setSelectedAccountId(acc.id);
+                setFrom(`${acc.name || acc.email} <${acc.email}>`);
+              }
+            }}
+            className="flex-1 text-sm border-0 outline-none bg-transparent text-gray-700"
+          >
+            {accounts.length === 0 && <option value="">{from || '默认账户'}</option>}
+            {accounts.map(acc => (
+              <option key={acc.id} value={acc.id}>
+                {acc.name || acc.email} — {acc.email}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* 收件人 with autocomplete */}

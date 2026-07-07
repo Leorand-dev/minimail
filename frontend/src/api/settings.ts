@@ -39,3 +39,8 @@ export async function testMailConnection(): Promise<{ status: string; message?: 
   const res = await api.post('/settings/mail/test');
   return res.data;
 }
+
+export async function autoDetectMailSettings(email: string): Promise<{ imap: { host: string; port: number }; smtp: { host: string; port: number } }> {
+  const res = await api.get('/settings/mail/auto-detect', { params: { email } });
+  return res.data;
+}

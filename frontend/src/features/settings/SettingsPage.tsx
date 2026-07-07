@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchMailSettings, testMailConnection, updateMailSettings } from '@/api/settings';
+import { fetchMailSettings, testMailConnection, updateMailSettings, autoDetectMailSettings } from '@/api/settings';
 import { fetchAccounts, createAccount, deleteAccount, setDefaultAccount } from '@/api/accounts';
 import type { EmailAccount } from '@/api/accounts';
 
@@ -18,6 +18,8 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
   const [testing, setTesting] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
+  const [wizardEmail, setWizardEmail] = useState('');
+  const [wizardResult, setWizardResult] = useState<{ imap: { host: string; port: number }; smtp: { host: string; port: number } } | null>(null);
 
   // 多账户
   const [accounts, setAccounts] = useState<EmailAccount[]>([]);
@@ -79,6 +81,24 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
       else setError(`❌ 连接测试失败: ${(res.errors || ['未知错误']).join('; ')}`);
     } catch { setError('连接测试请求失败'); }
     finally { setTesting(false); }
+  };
+
+  const handleAutoDetect = async () => {
+    if (!wizardEmail.includes('@')) return;
+    try {
+      const result = await autoDetectMailSettings(wizardEmail);
+      setWizardResult(result);
+    } catch {
+      setError('自动检测失败，请检查邮箱地址');
+    }
+  };
+
+  const applyWizardSettings = (result: { imap: { host: string; port: number }; smtp: { host: string; port: number } }) => {
+    setImap(prev => ({ ...prev, host: result.imap.host, port: result.imap.port }));
+    setSmtp(prev => ({ ...prev, host: result.smtp.host, port: result.smtp.port }));
+    setWizardResult(null);
+    setWizardEmail('');
+    setSuccess('✅ 已应用自动检测的设置，请检查并保存');
   };
 
   if (loading) {
@@ -187,6 +207,33 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
               </div>
             </div>
           </section>
+
+          {/* 📧 邮箱设置向导 */}
+          <div className="bg-white rounded-lg border border-gray-200 p-4 mt-4">
+            <h4 className="font-medium text-sm mb-3">📧 邮箱设置向导</h4>
+            <div className="flex gap-2">
+              <input
+                type="email"
+                value={wizardEmail}
+                onChange={(e) => setWizardEmail(e.target.value)}
+                placeholder="输入邮箱地址"
+                className="flex-1 px-3 py-1.5 text-sm border border-gray-200 rounded-md"
+              />
+              <button onClick={handleAutoDetect} className="px-4 py-1.5 text-sm bg-[#066da5] text-white rounded-md hover:bg-[#05588a]">
+                自动检测
+              </button>
+            </div>
+            {wizardResult && (
+              <div className="mt-3 p-3 bg-gray-50 rounded text-sm space-y-1">
+                <div className="text-green-600 font-medium">✅ 检测到配置</div>
+                <div>IMAP: {wizardResult.imap.host}:{wizardResult.imap.port}</div>
+                <div>SMTP: {wizardResult.smtp.host}:{wizardResult.smtp.port}</div>
+                <button onClick={() => applyWizardSettings(wizardResult)} className="mt-2 px-3 py-1 text-xs bg-[#066da5] text-white rounded">
+                  应用到设置
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Actions */}
           <div className="flex gap-3">
