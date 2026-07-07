@@ -1,69 +1,49 @@
-# Phase 0 开发进度记录
+# 开发进度记录
+
+最后更新: 2026-07-07 (v0.12 已发布)
 
 ## ✅ 已完成
 
-### Chunk 1: 后端骨架 ✅
-- [x] `backend/app/config.py` — Pydantic Settings (数据库/Redis/JWT/CORS/LLM/上传)
-- [x] `backend/app/database.py` — SQLAlchemy 2.0 async engine + session + Base
-- [x] `backend/app/main.py` — FastAPI 入口 (lifespan: init_db + close_db, CORS, 路由挂载)
-- [x] `backend/app/__init__.py` + 所有子包 `__init__.py`
-- [x] `backend/app/api/health.py` — 3 个健康检查路由 (/health, /health/db, /health/redis)
-- [x] `backend/requirements.txt` — 依赖固定 + bcrypt 兼容性修复
-- [x] `backend/.env.example` + `.env` — 环境变量模板
-- [x] 后端模块导入验证通过
+### v0.12 — 笔记库全面上线 + 邮件体验完善
 
-### Chunk 2: 用户认证 ✅
-- [x] `backend/app/models/user.py` — User ORM (含 IMAP/SMTP 配置 + 偏好 + 配额)
-- [x] `backend/app/schemas/auth.py` — Pydantic 请求/响应 + 密码强度校验
-- [x] `backend/app/services/auth.py` — AuthService (hash/verify, JWT encode/decode, register/login/refresh)
-- [x] `backend/app/api/auth.py` — 4 个路由 (POST /register, /login, /refresh, GET /me)
-- [x] JWT access_token(15min) + refresh_token(7d) + auto-refresh 机制
-- [x] 依赖注入: `get_current_user`
-- [x] bcrypt 兼容性修复 (pinned bcrypt<4.1)
-- [x] 模块导入验证通过
+#### 笔记库 (100% 对齐 Memos)
+- [x] Phase 1: 数据库 (Note/NoteTag/NoteReaction) + CRUD API + Alembic 迁移
+- [x] Phase 3: 前端 MemosPage/MemoCard/MemoEditor/MemoList + Zustand store
+- [x] 标签系统: CRUD API + TagsManager + `#tag` 自动提取
+- [x] 全文搜索: PostgreSQL tsvector + GIN 索引
+- [x] Phase 2: pgvector 语义搜索 + AI Agent from-context 端点
+- [x] Phase 5: 邮件→笔记 (from-email) + 统一搜索
+- [x] Reaction: 切换式 Emoji 点赞 (👍❤️🎉)
+- [x] 评论/线程: parent_id 评论系统
+- [x] 附件上传: 拖拽上传 + 下载
+- [x] 链接元数据: OG 标签抓取
+- [x] 内容属性: has_link/has_code/has_task_list/title
+- [x] PROTECTED 可见性: 三级 (private/protected/public)
+- [x] 公开分享链接: token 生成 + 无认证解析
+- [x] 快捷键: 保存过滤条件快捷入口
+- [x] SSE 实时同步: sse-starlette EventSource
+- [x] Webhook: note.created/updated/deleted 事件通知
 
-### Chunk 3: Redis + Alembic ✅
-- [x] `backend/app/services/redis_service.py` — Redis 异步连接池 + JSON 存取 + 健康检查
-- [x] `migrations/env.py` — Alembic async 环境配置
-- [x] `migrations/versions/001_create_users_table.py` — 初始迁移 (users 表全字段)
-- [x] `alembic.ini` — 迁移配置
+#### 邮件系统
+- [x] 多账户发件人选择: 撰写页下拉选择
+- [x] 邮箱设置向导: 自动检测 IMAP/SMTP (20+ 服务商)
+- [x] 会话模式 (Conversation View): 主题分组
 
-### Chunk 4: 前端基建 ✅
-- [x] `package.json` — React 19 + React Router 7 + Zustand 5 + Axios + Tailwind 4
-- [x] `vite.config.ts` — 代理 /api → :8000, 路径别名 @/
-- [x] `tsconfig.json` — Strict mode, 路径映射
-- [x] `src/index.css` — Tailwind 4 + Roundcube 主题色 (#066da5)
-- [x] `src/main.tsx` — 入口
-- [x] `src/App.tsx` — 路由 (/login, /register, /mail protected)
-- [x] `src/stores/auth.ts` — Zustand auth store (persist to localStorage)
-- [x] `src/api/client.ts` — Axios 实例 + JWT 拦截器 + token 刷新队列
-- [x] `src/api/auth.ts` — register/login/refresh/me API 调用
-- [x] `src/features/auth/LoginPage.tsx` — 登录页 (Roundcube 居中卡片风格)
-- [x] `src/features/auth/RegisterPage.tsx` — 注册页
-- [x] `public/favicon.svg` — Webmail Logo
+#### 系统优化
+- [x] 前端分包: vendor/editor/app 3 chunks <500kB
+- [x] 后端统一错误处理: 全局 Exception handler
+- [x] API 文档完善: notes.md 25+ 端点
+- [x] 全量 UI 美化: 统一 55px Header
+- [x] 系统文档: 15 篇 + HTML 渲染服务
+- [x] 代码审计: TypeScript 零错误
+- [x] Release v0.12: CHANGELOG + GitHub Release + Tag
 
-### Chunk 5: Docker + CI + 文档 ✅
-- [x] `docker/docker-compose.yml` — 4 服务 (postgres+pgvector, redis, backend, frontend)
-- [x] `.github/workflows/ci.yml` — 4 个 job (backend-lint, backend-test, frontend-lint, frontend-build)
-- [x] `Makefile` — dev/dev-backend/dev-frontend/dev-db/build/test/lint/migrate/clean
-- [x] `docs/INSTALL.md` — 从零部署指南 (Docker + 本地双方式)
+#### 部署
+- [x] Docker Compose 修复 (ENCRYPTION_KEY/迁移/Dockerfile)
+- [x] 部署指南: 开发/生产/Docker/Nginx/SSL/备份
+- [x] nginx.conf: SSE 不缓冲 + X-Forwarded-For + 文件上传限制
 
-## 📊 验证结果
+## 📋 进行中 / 计划
 
-| 检查项 | 状态 |
-|--------|------|
-| 后端语法检查 | ✅ |
-| 后端模块导入 | ✅ |
-| JWT 编解码 | ✅ |
-| bcrypt 密码哈希 | ✅ |
-| TypeScript 类型检查 | ✅ |
-| Vite 构建 (102 modules) | ✅ |
-
-## 🚀 下一步: Phase 1 — IMAP 邮件同步
-
-- [ ] IMAP 协议层 (aioimaplib)
-- [ ] 文件夹同步 (INBOX/Sent/Drafts/Trash/Spam)
-- [ ] 邮件列表 API + MIME 解析
-- [ ] 邮件预览渲染
-- [ ] Frontend 三栏布局 (FolderSidebar + MessageList + PreviewPane)
-- [ ] 搜索 API + 前端搜索栏
+- [ ] P3: 动态导入 accounts.ts 警告修复
+- [ ] P3: Release v0.13

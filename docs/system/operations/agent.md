@@ -1,6 +1,6 @@
 # 🤖 AI Agent 操作
 
-Minimall 所有功能均通过 REST API 暴露，AI Agent（如 Hermes、Claude Code、OpenAI Codex、DeepSeek 等）可通过 API 密钥自主操作。
+Minimail 所有功能均通过 REST API 暴露，AI Agent（如 Hermes、Claude Code、OpenAI Codex、DeepSeek 等）可通过 API 密钥自主操作。
 
 ## 获取 API 密钥
 
@@ -13,10 +13,10 @@ Minimall 所有功能均通过 REST API 暴露，AI Agent（如 Hermes、Claude 
 
 ```bash
 # 方式 1: Bearer Token（推荐）
-Authorization: Bearer wm_xxxxxxxx...
+Authorization: Bearer ***
 
 # 方式 2: API Key Header
-X-API-Key: wm_xxxxxxxx...
+X-API-Key: ***
 ```
 
 Agent 持有令牌后拥有与 Web 用户**相同的操作权限**。
@@ -27,63 +27,75 @@ Agent 持有令牌后拥有与 Web 用户**相同的操作权限**。
 |------|------|----------|
 | 📥 邮件 | 读取收件箱 | `GET /api/mail/folders` + `GET /api/mail/messages` |
 | ✉️ 邮件 | 发送邮件 | `POST /api/mail/send` |
-| 📂 邮件 | 文件夹管理 | `POST/DELETE /api/mail/folders` |
-| 📝 笔记 | 创建/查询/搜索 | `POST/GET /api/notes` + `GET /api/notes/search` |
-| 🏷️ 笔记 | 标签管理 | `POST/PUT/DELETE /api/notes/tags/*` |
-| 📎 笔记 | 置顶/归档/恢复 | `POST /api/notes/{id}/pin\|restore` |
+| 📝 笔记 | 创建/查询/更新/删除 | `GET/POST/PUT/DELETE /api/notes` |
+| 🏷️ 笔记 | 标签 CRUD | `GET/POST/PUT/DELETE /api/notes/tags` |
+| 🔍 笔记 | 全文搜索 | `GET /api/notes/search?q=xxx` |
+| 🧠 笔记 | 语义搜索 | `POST /api/notes/search/semantic` (传入 embedding) |
+| 📎 笔记 | 上传附件 | `POST /api/notes/{id}/attachments` |
+| 📧→📝 笔记 | 邮件转笔记 | `POST /api/notes/from-email` |
+| 💬 笔记 | 添加评论 | `POST /api/notes/{id}/comments` |
+| 👍 笔记 | Emoji 反应 | `POST /api/notes/{id}/reactions?emoji=👍` |
+| 🔗 笔记 | 公开分享 | `POST /api/notes/{id}/shares` |
+| 🌐 笔记 | 链接元数据 | `POST /api/notes/link-metadata` |
+| 🎯 笔记 | 自动标签 | `POST /api/notes` 内容中含 `#tag` 自动提取 |
+| 🔔 笔记 | Webhook 管理 | `CRUD /api/notes/webhooks` |
+| 📡 笔记 | SSE 实时事件 | `GET /api/notes/events` (EventSource) |
+| 🔖 笔记 | 快捷键管理 | `CRUD /api/notes/shortcuts` |
 | 👤 通讯录 | 联系人 CRUD | `GET/POST/PUT/DELETE /api/contacts/*` |
-| 🔑 自身管理 | 密钥管理 | `POST/DELETE /api/auth/tokens/*` |
+| 👥 通讯录 | 分组管理 | `GET/POST/PUT/DELETE /api/contact-groups` |
+| 🔎 统一搜索 | 跨邮件+笔记 | `GET /api/search?q=xxx` |
+| 🔑 自身管理 | API 密钥创建/撤销 | `POST/DELETE /api/auth/tokens` |
 
-## 工作流示例
-
-### Agent 日常记录
+## Agent 工作流示例
 
 ```bash
-# 1. 登录获取令牌
+# 1. Agent 登录获取令牌
 TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/login \
   -d '{"email":"agent@example.com","password":"***"}' \
   -H "Content-Type: application/json" | jq -r '.access_token')
 
-# 2. 查询待办邮件
-curl -s -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:8000/api/mail/messages?folder=INBOX&page_size=5"
+# 2. Agent 查询收件箱
+curl -s -H "Authorization: Bearer ***" \
+  http://localhost:8000/api/mail/messages?folder=INBOX
 
-# 3. 将决策记录到笔记库
-curl -s -X POST http://localhost:8000/api/notes \
-  -H "Authorization: Bearer $TOKEN" \
+# 3. Agent 使用 from-context 创建笔记
+curl -s -X POST http://localhost:8000/api/notes/from-context \
+  -H "Authorization: Bearer ***" \
   -H "Content-Type: application/json" \
   -d '{
-    "content": "# 架构决策\n\n选择 PostgreSQL 16 作为主数据库。",
-    "tags": ["adr", "database"]
+    "content": "会议纪要...",
+    "source": "AI Agent",
+    "tags": ["会议"]
   }'
 
-# 4. 搜索相关知识
-curl -s "http://localhost:8000/api/notes/search?q=postgresql+配置" \
-  -H "Authorization: Bearer $TOKEN"
+# 4. Agent 语义搜索笔记库
+curl -s -X POST http://localhost:8000/api/notes/search/semantic \
+  -H "Authorization: Bearer ***" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "架构决策", "top_k": 3}'
+
+# 5. Agent 创建 Webhook
+curl -s -X POST http://localhost:8000/api/notes/webhooks \
+  -H "Authorization: Bearer ***" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://my-server/webhook", "events": ["note.created"]}'
 ```
 
-### Agent 管理标签
+## 公开分享
+
+分享链接 **无需认证**，任何人都可通过 token 查看笔记内容：
 
 ```bash
-# 创建标签
-curl -s -X POST http://localhost:8000/api/notes/tags \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"name":"important"}'
-
-# 重命名标签（自动合并同名）
-curl -s -X PUT http://localhost:8000/api/notes/tags/important \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"new_name":"critical"}'
-
-# 删除标签（从所有笔记中移除）
-curl -s -X DELETE http://localhost:8000/api/notes/tags/old-tag \
-  -H "Authorization: Bearer $TOKEN"
+curl https://minimail.example.com/api/shares/{token}
 ```
 
-## 开发中特性
+## 实时事件
 
-| 特性 | 状态 | 说明 |
-|------|:----:|------|
-| Webhook | 📋 | 邮件到达/笔记更新时触发 |
-| MCP 协议 | 📋 | Model Context Protocol 原生支持 |
-| 语义搜索 | 📋 | pgvector + embedding 语义检索 |
+Agent 可通过 SSE 接收笔记变更事件：
+
+```bash
+curl -H "Authorization: Bearer ***" \
+  https://minimail.example.com/api/notes/events
+# → event: note.created
+# → data: {"id": "...", "event_type": "note.created", ...}
+```

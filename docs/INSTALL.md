@@ -9,21 +9,21 @@
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/Leorand-dev/webmail.git
-cd webmail
+git clone https://github.com/Leorand-dev/minimail.git
+cd minimail
 
-# 2. 配置环境变量 (可选)
-cp backend/.env.example backend/.env
+# 2. 配置环境变量
+cp docker/.env.example docker/.env
+# 编辑 docker/.env 填入 SECRET_KEY 和 ENCRYPTION_KEY
 
 # 3. 启动所有服务
-make dev
-# 或: cd docker && docker compose up -d
+docker compose -f docker/docker-compose.yml up -d
 
 # 4. 运行数据库迁移
-make migrate
+docker compose -f docker/docker-compose.yml exec backend alembic upgrade head
 
 # 5. 打开浏览器
-# 前端: http://localhost:3000
+# 前端: http://localhost
 # 后端 API: http://localhost:8000/docs
 ```
 
@@ -33,77 +33,34 @@ make migrate
 
 ```bash
 cd backend
-
-# 1. 创建虚拟环境
+cp .env.example .env
 python3 -m venv .venv
 source .venv/bin/activate
-
-# 2. 安装依赖
 pip install -r requirements.txt
-
-# 3. 配置环境变量
-cp .env.example .env
-# 编辑 .env 中的数据库/Redis 连接信息
-
-# 4. 启动数据库
-make dev-db
-# 或手动启动 PostgreSQL + Redis
-
-# 5. 运行迁移
-PYTHONPATH="$PWD" alembic upgrade head
-
-# 6. 启动开发服务器
-make dev-backend
-# 或: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+alembic upgrade head
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### 前端
 
 ```bash
 cd frontend
-
-# 1. 安装依赖
 npm install
-
-# 2. 启动开发服务器
-make dev-frontend
-# 或: npm run dev
-# 访问 http://localhost:5173 (API 自动代理到 :8000)
+npm run dev  # → http://localhost:5173
 ```
 
-## 验证安装
+### 数据库
 
 ```bash
-# 健康检查
-curl http://localhost:8000/health
-# → {"status":"ok","version":"0.1.0","uptime_seconds":...}
-
-# 注册新用户
-curl -X POST http://localhost:8000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"[YOUR_PASSWORD]","name":"测试"}'
-
-# 登录
-curl -X POST http://localhost:8000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"[YOUR_PASSWORD]"}'
+# Docker
+docker run -d --name minimail-pg -e POSTGRES_USER=webmail -e POSTGRES_PASSWORD=webmail_dev -e POSTGRES_DB=webmail -p 5432:5432 pgvector/pgvector:pg16
 ```
 
-## 项目结构
+## 详细说明
 
-```
-webmail/
-├── backend/          FastAPI 后端
-│   ├── app/          应用代码
-│   │   ├── api/      HTTP 路由
-│   │   ├── models/   ORM 模型
-│   │   ├── schemas/  Pydantic 序列化
-│   │   ├── services/ 业务逻辑
-│   │   └── agent/    AI Agent 模块
-│   ├── migrations/   Alembic 迁移
-│   └── tests/        测试
-├── frontend/         React SPA 前端
-│   └── src/          源代码
-├── docker/           Docker Compose 配置
-└── docs/             文档
-```
+完整部署指南见 [🚀 部署指南](docs/system/operations/deployment.md)，包含：
+- 生产环境 Gunicorn + Uvicorn 配置
+- Nginx 反向代理 + SSL
+- 环境变量说明
+- 备份与维护
+- 故障排查
