@@ -5,6 +5,7 @@ import api from '@/api/client';
 import FolderSidebar from '@/features/mail/components/FolderSidebar';
 import Toolbar from '@/features/mail/components/Toolbar';
 import MessageList from '@/features/mail/components/MessageList';
+import ConversationList from '@/features/mail/components/ConversationList';
 import PreviewPane from '@/features/mail/components/PreviewPane';
 import ComposeContent from '@/features/compose/ComposePage';
 import SettingsContent from '@/features/settings/SettingsPage';
@@ -30,7 +31,7 @@ const VIEW_CONFIG: Record<string, { title: string; icon: string }> = {
 export default function MailLayout() {
   const { currentFolder, page, searchQuery, searchDateFrom, searchDateTo,
     searchUnreadOnly, activeView, setActiveView, activePane, setActivePane, totalMessages,
-    setFolders, setMessages, setLoading, setError } = useMailStore();
+    setFolders, setMessages, setLoading, setError, conversationMode } = useMailStore();
 
   const initRef = useRef(false);
   const skipImapRef = useRef(false);
@@ -229,7 +230,11 @@ export default function MailLayout() {
 
         {activeView === 'mail' && (
           <>
-            <MessageList className={activePane === 'list' ? 'flex flex-col flex-1' : 'hidden lg:flex lg:flex-col lg:flex-1'} onSelectMessage={() => setActivePane('preview')} />
+            {conversationMode ? (
+              <ConversationList onSelectMessage={() => setActivePane('preview')} />
+            ) : (
+              <MessageList className={activePane === 'list' ? 'flex flex-col flex-1' : 'hidden lg:flex lg:flex-col lg:flex-1'} onSelectMessage={() => setActivePane('preview')} />
+            )}
             <PreviewPane className={activePane === 'preview' ? 'block flex-1' : 'hidden lg:block lg:flex-1'} />
           </>
         )}

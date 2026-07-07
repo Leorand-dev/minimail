@@ -20,6 +20,8 @@ export default function Toolbar() {
   const totalMessages = useMailStore((s) => s.totalMessages);
   const setPage = useMailStore((s) => s.setPage);
   const loading = useMailStore((s) => s.loading);
+  const conversationMode = useMailStore((s) => s.conversationMode);
+  const setConversationMode = useMailStore((s) => s.setConversationMode);
 
   const [searchInput, setSearchInput] = useState(searchQuery);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -123,6 +125,17 @@ export default function Toolbar() {
 
       {/* Quick action buttons */}
       <div className="flex items-center gap-1">
+        <button
+          onClick={() => setConversationMode(!conversationMode)}
+          className={`px-2 py-1 text-xs rounded-md transition-colors ${
+            conversationMode
+              ? 'bg-[#066da5]/10 text-[#066da5] font-medium'
+              : 'text-gray-400 hover:text-gray-600'
+          }`}
+          title={conversationMode ? '切换到列表视图' : '切换到会话视图'}
+        >
+          💬 会话
+        </button>
         <button
           onClick={() => setActiveView('settings')}
           className="px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 rounded"

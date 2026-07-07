@@ -40,6 +40,7 @@ interface MailState {
   selectedUid: number | null;
   previewMessage: MessageDetail | null;
   composePrefill: ComposePrefill | null;
+  conversationMode: boolean;
 
   setFolders: (folders: Folder[]) => void;
   setAccountFolders: (acc: AccountFolderGroup[]) => void;
@@ -63,6 +64,7 @@ interface MailState {
   setSelectedUid: (uid: number | null) => void;
   setPreviewMessage: (m: MessageDetail | null) => void;
   setComposePrefill: (p: ComposePrefill | null) => void;
+  setConversationMode: (v: boolean) => void;
 }
 
 export const useMailStore = create<MailState>()((set) => {
@@ -89,6 +91,7 @@ export const useMailStore = create<MailState>()((set) => {
     selectedUid: null,
     previewMessage: null,
     composePrefill: null,
+    conversationMode: false,
 
     setFolders: (folders) => set({ folders }),
     setAccountFolders: (accountFolders) => set({ accountFolders }),
@@ -117,5 +120,6 @@ export const useMailStore = create<MailState>()((set) => {
     setSelectedUid: (selectedUid) => set({ selectedUid }),
     setPreviewMessage: (previewMessage) => set({ previewMessage }),
     setComposePrefill: (composePrefill) => set({ composePrefill }),
+    setConversationMode: (conversationMode) => set({ conversationMode }),
   };
 });

@@ -181,3 +181,52 @@ export async function fetchAccountFolders(accountId: string): Promise<AccountFol
   const res = await api.get(`/mail/account-folders/${accountId}`);
   return res.data;
 }
+
+// ── 会话视图 ──
+
+export interface ConversationMessage {
+  uid: number;
+  subject: string;
+  from: string;
+  date: string;
+  preview: string;
+  has_attachments: boolean;
+  is_read: boolean;
+}
+
+export interface Conversation {
+  subject: string;
+  message_count: number;
+  latest_date: string;
+  messages: ConversationMessage[];
+}
+
+export async function fetchConversations(params: {
+  folder?: string;
+  account_id?: string;
+  page_size?: number;
+}): Promise<{ conversations: Conversation[]; total: number }> {
+  const res = await api.get('/mail/conversations', { params });
+  return res.data;
+}
+
+// ── 附件管理 ──
+
+export interface AttachmentInfo {
+  filename: string;
+  size: number;
+  uid: number;
+  part_id: string;
+  subject: string;
+  from: string;
+  date: string;
+}
+
+export async function fetchAttachments(folder?: string): Promise<AttachmentInfo[]> {
+  try {
+    const res = await api.get('/mail/attachments', { params: { folder } });
+    return res.data.attachments ?? res.data;
+  } catch {
+    return [];
+  }
+}

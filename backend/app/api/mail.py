@@ -4,9 +4,10 @@ Webmail — 邮件 API 路由
 
 from __future__ import annotations
 
+import asyncio
+import re
 import uuid
 from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from fastapi.responses import Response
 from pydantic import BaseModel
@@ -22,16 +23,25 @@ from app.imap import (
     mark_as_read,
     mark_as_unread,
     move_message,
-    copy_message,
     delete_message,
     create_folder,
     delete_folder,
-    close_connection,
 )
-from app.imap.connection import get_connection, update_sync_time, update_sync_time
-from app.imap.types import Folder, MessageDetail, MessageSummary
+from app.imap.connection import get_connection
+from app.imap.types import Folder, MessageDetail
 from app.models.user import User
 from app.services.auth import get_current_user
+
+# Subject normalization for conversation grouping
+_RE_PREFIX = re.compile(r'^(?:Re|Fwd|Fw|Aw|回复|转发|转發):\s*', re.IGNORECASE)
+
+def _normalize_subject(subject: str) -> str:
+    """标准化主题: 去除 Re:/Fwd: 前缀."""
+    s = subject.strip()
+    while _RE_PREFIX.match(s):
+        s = _RE_PREFIX.sub('', s).strip()
+    return s or subject
+
 
 router = APIRouter(prefix="/api/mail", tags=["mail"])
 
@@ -125,7 +135,7 @@ async def get_account_folders(
             user.id, cfg["host"], cfg["port"], cfg["ssl"], cfg["username"], cfg["password"]
         )
         folders = await imap_list_folders(imap)
-    except:
+    except Exception:
         folders = []
     
     return {
@@ -233,6 +243,79 @@ async def search_messages_route(
         "page": page,
         "page_size": page_size,
         "total_pages": max(1, (total + page_size - 1) // page_size),
+    }
+
+
+# ══════════════════════════════════════════
+# 会话 (主题分组)
+# ══════════════════════════════════════════
+
+
+@router.get("/conversations", summary="获取会话列表 (按主题分组)")
+async def get_conversations(
+    folder: str = Query("INBOX", description="邮箱文件夹"),
+    account_id: uuid.UUID | None = None,
+    page_size: int = Query(50, ge=1, le=200),
+    cursor: str | None = None,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """获取邮件会话列表. 按标准化主题分组."""
+    try:
+        cfg = await _get_user_imap_config(user, db, account_id)
+        # 设置 IMAP 连接超时 (5s), 超时则回退到 demo 数据
+        imap = await asyncio.wait_for(
+            get_connection(
+                user.id, cfg["host"], cfg["port"], cfg["ssl"], cfg["username"], cfg["password"]
+            ),
+            timeout=5,
+        )
+        messages, total = await asyncio.wait_for(
+            imap_fetch_messages(
+                imap, folder=folder, page=1, page_size=page_size,
+                sort_field="date", sort_order="DESC",
+            ),
+            timeout=10,
+        )
+    except Exception:
+        # IMAP 连接/查询失败, 使用 demo 数据
+        from app.imap.demo_data import get_demo_messages
+        msgs = get_demo_messages(user.id)
+        messages = [m for m in msgs if m.subject]
+        total = len(messages)
+
+    # Group by normalized subject
+    groups: dict[str, dict] = {}
+    for msg in messages:
+        key = _normalize_subject(msg.subject)
+        if key not in groups:
+            groups[key] = {
+                "subject": key,
+                "message_count": 0,
+                "messages": [],
+                "latest_date": msg.date,
+            }
+        groups[key]["message_count"] += 1
+        groups[key]["messages"].append({
+            "uid": msg.uid,
+            "subject": msg.subject,
+            "from": str(msg.from_),
+            "date": msg.date.isoformat() if msg.date else "",
+            "preview": msg.preview,
+            "has_attachments": msg.has_attachments,
+            "is_read": msg.is_read,
+        })
+        if msg.date and msg.date > groups[key]["latest_date"]:
+            groups[key]["latest_date"] = msg.date
+
+    conversations = sorted(
+        groups.values(), key=lambda c: c["latest_date"], reverse=True
+    )
+
+    return {
+        "conversations": conversations,
+        "total": len(conversations),
+        "folder": folder,
     }
 
 
