@@ -66,10 +66,6 @@ def _normalize_flags(raw_flags: bytes | list[bytes]) -> list[str]:
 
 async def list_folders(imap, subscribed_only: bool = False) -> list[Folder]:
     """列出用户邮箱所有文件夹."""
-    cmd = 'LIST "" "*"'
-    if subscribed_only:
-        cmd = 'LSUB "" "*"'
-
     await imap.noop()
     typ, data = await imap.list()
 

@@ -5,18 +5,15 @@ Minimail — 通讯录服务
 from __future__ import annotations
 
 import uuid
-from typing import Optional
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.models.contact import Contact, ContactGroup
 from app.schemas.contact import (
     ContactCreate,
     ContactGroupCreate,
     ContactGroupUpdate,
-    ContactResponse,
     ContactUpdate,
 )
 

@@ -28,8 +28,9 @@ export default function TagsManager({ tags, onRefresh }: TagsManagerProps) {
       setNewTagName('');
       setError('');
       onRefresh();
-    } catch (e: any) {
-      setError(e?.response?.data?.detail || '创建失败');
+    } catch (e: unknown) {
+      const axiosErr = e as { response?: { data?: { detail?: string } } };
+      setError(axiosErr?.response?.data?.detail || '创建失败');
     }
   };
 
@@ -45,8 +46,9 @@ export default function TagsManager({ tags, onRefresh }: TagsManagerProps) {
       setRenaming(null);
       setError('');
       onRefresh();
-    } catch (e: any) {
-      setError(e?.response?.data?.detail || '重命名失败');
+    } catch (e: unknown) {
+      const axiosErr = e as { response?: { data?: { detail?: string } } };
+      setError(axiosErr?.response?.data?.detail || '重命名失败');
     }
   };
 
@@ -57,8 +59,9 @@ export default function TagsManager({ tags, onRefresh }: TagsManagerProps) {
       await deleteTag(name);
       setError('');
       onRefresh();
-    } catch (e: any) {
-      setError(e?.response?.data?.detail || '删除失败');
+    } catch (e: unknown) {
+      const axiosErr = e as { response?: { data?: { detail?: string } } };
+      setError(axiosErr?.response?.data?.detail || '删除失败');
     } finally {
       setDeleting(null);
     }

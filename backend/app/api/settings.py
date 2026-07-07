@@ -4,17 +4,15 @@ Webmail — 设置 API (IMAP/SMTP 配置 CRUD)
 
 from __future__ import annotations
 
-import base64
 import logging
 
-from cryptography.fernet import Fernet
 from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
 from app.database import get_db
 from app.services.auth import get_current_user
+from app.services.email_account import _encrypt_password, _decrypt_password
 from app.models.user import User
 from app.schemas.note import NoteSettingsResponse
 
@@ -54,14 +52,6 @@ class MailSettingsUpdate(BaseModel):
 
 
 # ── Helpers ──
-
-
-def _encrypt_password(plain: str) -> str:
-    """使用 Fernet 加密密码."""
-    if not plain:
-        return ""
-    cipher = Fernet(settings.encryption_key.encode())
-    return base64.urlsafe_b64encode(cipher.encrypt(plain.encode())).decode()
 
 
 def _masked_config(user: User) -> MailSettingsResponse:
@@ -173,10 +163,7 @@ async def test_mail_connection(
             smtp_pwd = ""
             if current_user.smtp_password_enc:
                 try:
-                    cipher = Fernet(settings.encryption_key.encode())
-                    smtp_pwd = cipher.decrypt(
-                        base64.urlsafe_b64decode(current_user.smtp_password_enc.encode())
-                    ).decode()
+                    smtp_pwd = _decrypt_password(current_user.smtp_password_enc)
                 except Exception:
                     smtp_pwd = current_user.smtp_password_enc
             if current_user.smtp_ssl:

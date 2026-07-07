@@ -6,7 +6,7 @@ Minimail — 邮箱自动检测
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 
 from app.models.user import User
 from app.services.auth import get_current_user

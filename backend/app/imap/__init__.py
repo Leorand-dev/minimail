@@ -5,7 +5,8 @@ Minimail — IMAP 协议层
 from app.imap.connection import get_connection, close_connection, close_all, managed_connection
 from app.imap.folder import list_folders, create_folder, delete_folder, rename_folder
 from app.imap.message import fetch_messages, fetch_message_detail, search_messages
-from app.imap.message import mark_as_read, mark_as_unread, move_message, copy_message, delete_message, fetch_attachment
+from app.imap.message import mark_as_read, mark_as_unread, move_message, copy_message, delete_message  # noqa: F401
+from app.imap.message import fetch_attachment  # noqa: F401
 from app.imap.types import Folder, MessageSummary, MessageDetail, Address, Attachment, Flag
 
 __all__ = [

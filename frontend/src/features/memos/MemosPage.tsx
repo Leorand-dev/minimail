@@ -153,16 +153,21 @@ export default function MemosPage() {
   };
 
   const handleSave = async (content: string, tags: string[]) => {
-    if (editingNote) {
-      const updated = await apiUpdateNote(editingNote.id, { content, tags });
-      updateNoteInList(updated);
-    } else {
-      const created = await apiCreateNote({ content, tags });
-      setNotes([created, ...notes]);
+    try {
+      if (editingNote) {
+        const updated = await apiUpdateNote(editingNote.id, { content, tags });
+        updateNoteInList(updated);
+      } else {
+        const created = await apiCreateNote({ content, tags });
+        setNotes([created, ...notes]);
+      }
+      setShowEditor(false);
+      setEditingNote(null);
+      loadTags();
+    } catch (e) {
+      console.error('保存笔记失败', e);
+      // Keep editor open so user can retry
     }
-    setShowEditor(false);
-    setEditingNote(null);
-    loadTags();
   };
 
   const handleCancel = () => {
@@ -171,14 +176,22 @@ export default function MemosPage() {
   };
 
   const handleDelete = async (id: string) => {
-    await apiDeleteNote(id);
-    removeNoteFromList(id);
-    loadTags();
+    try {
+      await apiDeleteNote(id);
+      removeNoteFromList(id);
+      loadTags();
+    } catch (e) {
+      console.error('删除笔记失败', e);
+    }
   };
 
   const handleTogglePin = async (id: string) => {
-    const updated = await apiTogglePin(id);
-    updateNoteInList(updated);
+    try {
+      const updated = await apiTogglePin(id);
+      updateNoteInList(updated);
+    } catch (e) {
+      console.error('置顶笔记失败', e);
+    }
   };
 
   return (

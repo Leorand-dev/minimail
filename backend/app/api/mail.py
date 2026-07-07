@@ -85,10 +85,8 @@ async def _get_user_imap_config(
         password = user.imap_password_enc or ""
         if password:
             try:
-                from cryptography.fernet import Fernet
-                import base64
-                cipher = Fernet(settings.encryption_key.encode())
-                password = cipher.decrypt(base64.urlsafe_b64decode(password.encode())).decode()
+                from app.services.email_account import _decrypt_password
+                password = _decrypt_password(password)
             except Exception:
                 pass  # fallback to raw encrypted value
         return {
@@ -101,10 +99,8 @@ async def _get_user_imap_config(
     password = user.imap_password_enc or ""
     if password:
         try:
-            from cryptography.fernet import Fernet
-            import base64
-            cipher = Fernet(settings.encryption_key.encode())
-            password = cipher.decrypt(base64.urlsafe_b64decode(password.encode())).decode()
+            from app.services.email_account import _decrypt_password
+            password = _decrypt_password(password)
         except Exception:
             pass
     return {

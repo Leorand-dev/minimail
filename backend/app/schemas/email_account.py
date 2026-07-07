@@ -4,9 +4,7 @@ Webmail — 邮箱账户 Schema
 
 from __future__ import annotations
 
-import uuid
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, Field
 

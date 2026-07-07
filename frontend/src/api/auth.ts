@@ -43,7 +43,7 @@ export async function refreshToken(token: string): Promise<AuthResponse> {
   return res.data;
 }
 
-export async function getMe() {
-  const res = await api.get('/auth/me');
+export async function getMe(): Promise<AuthResponse['user']> {
+  const res = await api.get<AuthResponse['user']>('/auth/me');
   return res.data;
 }

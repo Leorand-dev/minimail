@@ -12,13 +12,15 @@ export default function ConversationList({ onSelectMessage }: ConversationListPr
 
   const [convs, setConvs] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setLoading(true);
+    setError('');
     fetchConversations({ folder: currentFolder, page_size: 50 })
       .then((data) => setConvs(data.conversations))
-      .catch(console.error)
+      .catch(() => setError('加载会话失败'))
       .finally(() => setLoading(false));
   }, [currentFolder]);
 
@@ -37,6 +39,30 @@ export default function ConversationList({ onSelectMessage }: ConversationListPr
         <div className="flex items-center gap-2 text-sm text-gray-400">
           <div className="w-4 h-4 border-2 border-[#066da5] border-t-transparent rounded-full animate-spin" />
           加载会话中...
+        </div>
+      </div>
+    );
+
+  if (error)
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center max-w-xs">
+          <div className="text-4xl mb-3">⚠️</div>
+          <p className="text-gray-500 font-medium mb-1">连接失败</p>
+          <p className="text-xs text-gray-400 mb-4">{error}</p>
+          <button
+            onClick={() => {
+              setLoading(true);
+              setError('');
+              fetchConversations({ folder: currentFolder, page_size: 50 })
+                .then((data) => setConvs(data.conversations))
+                .catch(() => setError('加载会话失败'))
+                .finally(() => setLoading(false));
+            }}
+            className="px-4 py-1.5 text-[#066da5] text-xs border border-[#066da5] rounded hover:bg-blue-50 transition-colors"
+          >
+            重试
+          </button>
         </div>
       </div>
     );

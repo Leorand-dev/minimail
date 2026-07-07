@@ -4,10 +4,9 @@ Minimail — 公开分享链接查看
 
 from __future__ import annotations
 
-import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 

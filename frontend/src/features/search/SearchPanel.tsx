@@ -18,15 +18,32 @@ export default function SearchPanel({ query, onClose, onSelectItem }: SearchPane
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const panelRef = useRef<HTMLDivElement>(null);
+  const reqIdRef = useRef(0);
 
   useEffect(() => {
     if (!query.trim()) { setResults([]); return; }
-    setLoading(true);
-    setError('');
-    unifiedSearch({ q: query.trim(), limit: 20 })
-      .then((res) => setResults(res.results || []))
-      .catch(() => setError('搜索失败'))
-      .finally(() => setLoading(false));
+    const currentReqId = ++reqIdRef.current;
+    const timer = setTimeout(() => {
+      setLoading(true);
+      setError('');
+      unifiedSearch({ q: query.trim(), limit: 20 })
+        .then((res) => {
+          if (currentReqId === reqIdRef.current) {
+            setResults(res.results || []);
+          }
+        })
+        .catch(() => {
+          if (currentReqId === reqIdRef.current) {
+            setError('搜索失败');
+          }
+        })
+        .finally(() => {
+          if (currentReqId === reqIdRef.current) {
+            setLoading(false);
+          }
+        });
+    }, 300);
+    return () => clearTimeout(timer);
   }, [query]);
 
   // Click outside to close

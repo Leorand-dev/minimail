@@ -12,11 +12,10 @@ import logging
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path, Query, status, UploadFile, File
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status, UploadFile, File
 from pathlib import Path as FilePath
 import sqlalchemy
-from sqlalchemy import func, or_
+from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sse_starlette.sse import EventSourceResponse
@@ -40,12 +39,10 @@ from app.schemas.note import (
     LinkMetadataResponse,
     NoteAttachmentResponse,
     NoteCreate,
-    NoteEvent,
     NoteListResponse,
     NoteReactionResponse,
     NoteResponse,
     NoteResponseWithReactions,
-    NoteSettingsResponse,
     NoteShareCreate,
     NoteShareResponse,
     NoteShortcutCreate,
@@ -379,7 +376,6 @@ async def update_note(
         update_fields = True
         # 重新提取自动标签
         auto_tags = extract_note_properties(note.content).auto_tags
-        old_auto = [t for t in note.tags if not t.startswith("_")]
         new_tags = list(set(note.tags + auto_tags))
         if len(new_tags) != len(note.tags):
             note.tags = new_tags
@@ -741,7 +737,7 @@ async def create_share_link(
     db: AsyncSession = Depends(get_db),
 ):
     """创建笔记分享链接."""
-    note = await _get_note_or_404(note_id, user, db)
+    await _get_note_or_404(note_id, user, db)
     if not user.note_allow_shares:
         raise HTTPException(status_code=403, detail="分享功能已关闭")
     share = NoteShareModel(
@@ -798,7 +794,7 @@ async def delete_share_link(
     db: AsyncSession = Depends(get_db),
 ):
     """删除分享链接."""
-    note = await _get_note_or_404(note_id, user, db)
+    await _get_note_or_404(note_id, user, db)
     result = await db.execute(
         select(NoteShareModel).where(
             NoteShareModel.id == share_id,
@@ -1027,7 +1023,7 @@ async def _trigger_webhooks(
             result = await db.execute(
                 select(WebhookModel).where(
                     WebhookModel.user_id == user_id,
-                    WebhookModel.enabled == True,
+                    WebhookModel.enabled == True,  # noqa: E712
                     WebhookModel.events.any(event_type),
                 )
             )

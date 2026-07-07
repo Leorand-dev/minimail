@@ -5,9 +5,8 @@ Webmail — 通讯录 API
 from __future__ import annotations
 
 import uuid
-from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -31,7 +30,7 @@ from app.services.contact import (
     get_contact as svc_get_contact,
     list_contacts,
     list_groups,
-    update_contact,
+    update_contact as svc_update_contact,
     update_group as svc_update_group,
 )
 
@@ -254,7 +253,7 @@ async def update_contact(
     db: AsyncSession = Depends(get_db),
 ):
     """更新联系人."""
-    contact = await update_contact(db, contact_id, user.id, data)
+    contact = await svc_update_contact(db, contact_id, user.id, data)
     if not contact:
         raise HTTPException(404, "联系人不存在")
     return ContactResponse(

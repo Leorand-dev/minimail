@@ -7,8 +7,8 @@ from pathlib import Path
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
-from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+from sqlalchemy import pool
+from sqlalchemy.ext.asyncio import create_async_engine
 
 # 将项目根目录加入 sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))

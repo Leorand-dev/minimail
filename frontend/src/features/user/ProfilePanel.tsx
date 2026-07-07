@@ -40,8 +40,9 @@ export default function ProfilePanel() {
       await changePassword(currentPwd, newPwd);
       setSuccess('密码已修改');
       setCurrentPwd(''); setNewPwd(''); setShowPwd(false);
-    } catch (err: any) {
-      setError(err?.response?.data?.detail || '密码修改失败');
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { detail?: string } } };
+      setError(axiosErr?.response?.data?.detail || '密码修改失败');
     }
     finally { setChangingPwd(false); }
   };

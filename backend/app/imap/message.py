@@ -5,10 +5,7 @@ Minimail — IMAP 邮件操作 (搜索/获取/移动/删除)
 from __future__ import annotations
 
 import logging
-import uuid
-from typing import Optional
 
-from app.imap.connection import get_connection
 from app.imap.parser import parse_message, parse_summary
 from app.imap.types import MessageDetail, MessageSummary
 
@@ -152,7 +149,7 @@ async def search_messages(
     # 构建 IMAP SEARCH 条件
     criteria = []
     if query:
-        criteria.append(f'TEXT "{{}}"'.format(query.replace('"', '')))
+        criteria.append('TEXT "{}"'.format(query.replace('"', '')))
     if date_from:
         criteria.append(f"SINCE {date_from}")
     if date_to:

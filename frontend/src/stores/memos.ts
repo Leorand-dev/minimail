@@ -30,7 +30,7 @@ interface NotesState {
   removeNoteFromList: (id: string) => void;
 }
 
-export const useNotesStore = create<NotesState>((set) => ({
+export const useNotesStore = create<NotesState>()((set) => ({
   notes: [],
   tags: [],
   activeTag: null,

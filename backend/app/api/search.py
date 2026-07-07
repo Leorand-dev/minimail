@@ -40,7 +40,6 @@ async def unified_search(
         return UnifiedSearchResponse(results=[], total=0, query="")
 
     # ── 搜索笔记 ──
-    from sqlalchemy import func as sa_func
 
     note_query = select(NoteModel).where(
         NoteModel.user_id == user.id,

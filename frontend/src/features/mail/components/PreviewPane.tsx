@@ -1,4 +1,5 @@
 
+import { useState } from 'react';
 import { useMailStore } from '@/stores/mail';
 import { getAttachmentUrl } from '@/api/mail';
 import { createNoteFromEmail } from '@/api/memos';
@@ -25,6 +26,7 @@ export default function PreviewPane({ className = '' }: PreviewPaneProps) {
   const currentFolder = useMailStore((s) => s.currentFolder);
   const setActiveView = useMailStore((s) => s.setActiveView);
   const setComposePrefill = useMailStore((s) => s.setComposePrefill);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   if (!previewMessage && !loading) {
     return (
@@ -115,6 +117,7 @@ export default function PreviewPane({ className = '' }: PreviewPaneProps) {
   };
 
   const handleSaveToNotes = async () => {
+    setSaveStatus('saving');
     try {
       await createNoteFromEmail({
         subject: msg.subject,
@@ -124,18 +127,11 @@ export default function PreviewPane({ className = '' }: PreviewPaneProps) {
         folder: currentFolder,
         tags: ['email'],
       });
-      // Show success feedback
-      const btn = document.getElementById('save-to-notes-btn');
-      if (btn) {
-        btn.textContent = '✅ 已保存';
-        setTimeout(() => { btn.textContent = '📝 转为笔记'; }, 2000);
-      }
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
     } catch {
-      const btn = document.getElementById('save-to-notes-btn');
-      if (btn) {
-        btn.textContent = '❌ 保存失败';
-        setTimeout(() => { btn.textContent = '📝 转为笔记'; }, 2000);
-      }
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 2000);
     }
   };
 
@@ -165,11 +161,13 @@ export default function PreviewPane({ className = '' }: PreviewPaneProps) {
               title="转发"
             >↗ 转发</button>
             <button
-              id="save-to-notes-btn"
               onClick={handleSaveToNotes}
-              className="px-2.5 py-1 text-xs text-emerald-700 border border-emerald-300 rounded hover:bg-emerald-50"
+              disabled={saveStatus === 'saving'}
+              className="px-2.5 py-1 text-xs text-emerald-700 border border-emerald-300 rounded hover:bg-emerald-50 disabled:opacity-50"
               title="转为笔记保存"
-            >📝 转为笔记</button>
+            >
+              {saveStatus === 'saving' ? '⏳ 保存中...' : saveStatus === 'saved' ? '✅ 已保存' : saveStatus === 'error' ? '❌ 保存失败' : '📝 转为笔记'}
+            </button>
           </div>
         </div>
 

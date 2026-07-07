@@ -9,11 +9,9 @@ from __future__ import annotations
 import email
 import email.header
 import email.utils
-import quopri
 import re
 from datetime import datetime, timezone
 from email.mime.base import MIMEBase
-from typing import Optional
 
 from app.imap.types import Address, Attachment, MessageDetail, MessageSummary
 

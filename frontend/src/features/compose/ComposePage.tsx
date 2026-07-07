@@ -14,6 +14,7 @@ interface ComposePageProps {
 export default function ComposePage({ onBack }: ComposePageProps) {
   const navigate = useNavigate();
   const toRef = useRef<HTMLInputElement>(null);
+  const sendTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [cc, setCc] = useState('');
@@ -33,6 +34,13 @@ export default function ComposePage({ onBack }: ComposePageProps) {
     const handler = () => handleSendRef.current();
     window.addEventListener('compose-send', handler);
     return () => window.removeEventListener('compose-send', handler);
+  }, []);
+
+  // Clean up pending timer on unmount
+  useEffect(() => {
+    return () => {
+      if (sendTimerRef.current) clearTimeout(sendTimerRef.current);
+    };
   }, []);
 
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -94,7 +102,7 @@ export default function ComposePage({ onBack }: ComposePageProps) {
       await api.post('/mail/send', payload);
 
       setSuccess(`✅ 发送成功`);
-      setTimeout(() => onBack ? onBack() : navigate('/mail'), 2000);
+      sendTimerRef.current = setTimeout(() => onBack ? onBack() : navigate('/mail'), 2000);
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { detail?: string } }; message?: string };
       setError(axiosErr?.response?.data?.detail || axiosErr?.message || '发送失败');

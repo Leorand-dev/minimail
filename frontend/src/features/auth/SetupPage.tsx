@@ -36,8 +36,9 @@ export default function SetupPage() {
       });
       setStep('done');
       setTimeout(() => navigate('/login'), 1500);
-    } catch (err: any) {
-      setError(err?.response?.data?.detail || '设置失败');
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { detail?: string } } };
+      setError(axiosErr?.response?.data?.detail || '设置失败');
     } finally {
       setLoading(false);
     }

@@ -17,7 +17,6 @@ import mimetypes
 import uuid
 from email import encoders
 from email.header import Header
-from typing import Optional
 
 import aiosmtplib
 
@@ -152,14 +151,9 @@ async def send_email(
 
     # 如果没传密码 (从账户来的直接是明文), 且需要从 user 解密
     if _smtp_password is None and user.smtp_password_enc:
-        import base64
-        from cryptography.fernet import Fernet
-        from app.config import settings
+        from app.services.email_account import _decrypt_password
         try:
-            cipher = Fernet(settings.encryption_key.encode())
-            smtp_password = cipher.decrypt(
-                base64.urlsafe_b64decode(user.smtp_password_enc.encode())
-            ).decode()
+            smtp_password = _decrypt_password(user.smtp_password_enc)
         except Exception:
             smtp_password = user.smtp_password_enc or ""
 

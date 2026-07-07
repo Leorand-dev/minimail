@@ -28,7 +28,10 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
   useEffect(() => {
     fetchMailSettings()
       .then((data) => { setImap(data.imap); setSmtp(data.smtp); })
-      .catch((err) => { if (err?.response?.status !== 401) console.warn('加载设置失败:', err); })
+      .catch((err: unknown) => {
+        const axiosErr = err as { response?: { status?: number } };
+        if (axiosErr?.response?.status !== 401) console.warn('加载设置失败:', err);
+      })
       .finally(() => setLoading(false));
   }, []);
 

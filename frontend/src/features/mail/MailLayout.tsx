@@ -122,7 +122,7 @@ export default function MailLayout() {
         const folderMsgs = (res.data.messages?.messages || []);
         const folder = currentFolder.toLowerCase();
         const filtered = folder === 'inbox' ? folderMsgs
-          : folderMsgs.filter((m: any) => {
+          : folderMsgs.filter((m: { from_?: { email?: string } }) => {
               if (folder === 'sent') return m.from_?.email?.includes('demo');
               if (folder === 'junk' || folder === 'drafts' || folder === 'trash' || folder === 'archive') return false;
               return true;

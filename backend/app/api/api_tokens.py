@@ -5,9 +5,8 @@ Minimail — API 令牌路由
 from __future__ import annotations
 
 import uuid
-from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Header, Path, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,7 +19,7 @@ from app.schemas.api_token import (
     ApiTokenResponse,
     ApiTokenUpdate,
 )
-from app.services.api_token import create_token, list_tokens, revoke_token, validate_token
+from app.services.api_token import create_token, list_tokens, revoke_token
 from app.services.auth import get_current_user
 
 router = APIRouter(prefix="/api/auth/tokens", tags=["api-tokens"])
