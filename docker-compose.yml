@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_DB: webmail
       POSTGRES_USER: webmail
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-webmail_dev}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
     ports:
       - "5432:5432"
     volumes:
@@ -41,10 +41,10 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql+asyncpg://webmail:${DB_PASSWORD:-webmail_dev}@postgres:5432/webmail
+      DATABASE_URL: postgresql+asyncpg://webmail:${DB_PASSWORD}@postgres:5432/webmail
       REDIS_URL: redis://redis:6379/0
       SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required (32 chars)}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
       CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:5173","http://localhost:3000"]}
       DEBUG: "false"
     depends_on:
