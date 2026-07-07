@@ -6,7 +6,6 @@
  */
 
 import { useEffect, useState, useRef } from 'react';
-import ReactMarkdown from 'react-markdown';
 import api from '@/api/client';
 
 interface DocEntry {
@@ -125,10 +124,9 @@ export default function DocsPage() {
           ) : (
             <div
               ref={contentRef}
-              className="overflow-y-auto prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-a:text-[#066da5] prose-code:text-pink-600 prose-pre:bg-gray-50 prose-pre:border prose-pre:border-gray-200"
-            >
-              <ReactMarkdown>{content}</ReactMarkdown>
-            </div>
+              className="overflow-y-auto max-w-none"
+              dangerouslySetInnerHTML={{ __html: content }}
+            />
           )}
         </div>
       </div>
