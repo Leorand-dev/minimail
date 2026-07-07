@@ -8,6 +8,7 @@ import type { ImapStatus, AccountFolderGroup } from '@/api/mail';
 import api from '@/api/client';
 import { useNotesStore, type NoteView } from '@/stores/memos';
 import { fetchShortcuts } from '@/api/memos';
+import { fetchAccounts } from '@/api/accounts';
 import type { NoteShortcut } from '@/api/memos';
 
 interface FolderSidebarProps {
@@ -75,9 +76,8 @@ export default function FolderSidebar({ className = '', onSelectFolder }: Folder
 
   // Load account-folders on mount
   useEffect(() => {
-    const loadAccounts = async () => {
+    const loadFolders = async () => {
       try {
-        const { fetchAccounts } = await import('@/api/accounts');
         const accounts = await fetchAccounts();
         if (accounts.length === 0) {
           // No accounts, try demo
@@ -123,7 +123,7 @@ export default function FolderSidebar({ className = '', onSelectFolder }: Folder
         } catch {}
       }
     };
-    loadAccounts();
+    loadFolders();
 
     fetchImapStatus().then(setImapStatus).catch(() => {});
     fetchShortcuts().then(setShortcuts).catch(() => {});
