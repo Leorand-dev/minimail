@@ -159,7 +159,7 @@ class NoteTagRename(BaseModel):
 class NoteTagResponse(BaseModel):
     """标签响应."""
 
-    id: int
+    id: int | None = None  # 聚合查询时可能为空
     name: str
     note_count: int = 0
     created_at: str | None = None
