@@ -37,8 +37,8 @@ class Note(Base):
     )
     content: Mapped[str] = mapped_column(Text, nullable=False)  # Markdown 源码
     visibility: Mapped[str] = mapped_column(
-        String(16), nullable=False, default="private"
-    )  # private / public
+        String(16), default="private", nullable=False
+    )
     pinned: Mapped[bool] = mapped_column(Boolean, default=False)
     parent_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("notes.id", ondelete="SET NULL"), nullable=True

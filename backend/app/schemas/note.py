@@ -4,6 +4,7 @@ Minimail — 笔记库 Note Schema
 
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import datetime
 from typing import Optional
@@ -31,6 +32,53 @@ class NoteReactionResponse(BaseModel):
     reacted: bool = False
 
 
+class NoteProperty(BaseModel):
+    """笔记内容属性 (从 Markdown 内容计算)."""
+
+    has_link: bool = False
+    has_code: bool = False
+    has_task_list: bool = False
+    has_incomplete_tasks: bool = False
+    title: str = ""
+    auto_tags: list[str] = []
+
+
+def extract_note_properties(content: str) -> NoteProperty:
+    """从 Markdown 内容提取属性和标签."""
+    props = NoteProperty()
+
+    if not content:
+        return props
+
+    # 标题: 第一个 H1
+    h1_match = re.search(r"^# (.+)$", content, re.MULTILINE)
+    if h1_match:
+        props.title = h1_match.group(1).strip()[:200]
+
+    # 链接 (Markdown 链接或裸 URL)
+    if re.search(r"\[.+?\]\(.+?\)|https?://[^\s)>\"]+", content):
+        props.has_link = True
+
+    # 代码块 (fenced)
+    if re.search(r"```|~~~", content):
+        props.has_code = True
+
+    # 任务列表
+    task_items = re.findall(r"- \[([ x]?)\]", content, re.IGNORECASE)
+    if task_items:
+        props.has_task_list = True
+        if any(t.strip() == "" or t.strip() == " " for t in task_items):
+            props.has_incomplete_tasks = True
+
+    # 自动提取标签 (#tag)
+    tags = re.findall(
+        r"#([a-zA-Z\u4e00-\u9fff][a-zA-Z0-9\u4e00-\u9fff_-]*)", content
+    )
+    props.auto_tags = list(dict.fromkeys(t.lower() for t in tags if len(t) <= 32))
+
+    return props
+
+
 class NoteResponse(BaseModel):
     """笔记响应."""
 
@@ -44,6 +92,7 @@ class NoteResponse(BaseModel):
     tags: list[str] = []
     created_at: datetime | None = None
     updated_at: datetime | None = None
+    property: NoteProperty | None = None
 
     model_config = {"from_attributes": True}  # type: ignore[arg-type]
 
@@ -62,117 +111,118 @@ class NoteResponseWithReactions(BaseModel):
     created_at: datetime | None = None
     updated_at: datetime | None = None
     reactions: list[NoteReactionResponse] = []
+    property: NoteProperty | None = None
 
     model_config = {"from_attributes": True}  # type: ignore[arg-type]
 
 
 class NoteCreate(BaseModel):
-    """创建笔记."""
+    """创建笔记请求."""
 
     content: str = Field(..., min_length=1, max_length=65536)
-    visibility: str = Field(default="private", pattern=r"^(private|public)$")
+    visibility: str = "private"
     pinned: bool = False
     parent_id: uuid.UUID | None = None
-    tags: list[str] = Field(default=[], max_length=20)
+    tags: list[str] = []
 
 
 class NoteUpdate(BaseModel):
-    """更新笔记."""
+    """更新笔记请求."""
 
-    content: Optional[str] = Field(None, max_length=65536)
-    visibility: Optional[str] = Field(None, pattern=r"^(private|public)$")
+    content: Optional[str] = None
+    visibility: Optional[str] = None
     pinned: Optional[bool] = None
-    row_status: Optional[str] = Field(None, pattern=r"^(active|archived)$")
-    tags: Optional[list[str]] = Field(None, max_length=20)
+    row_status: Optional[str] = None
+    tags: Optional[list[str]] = None
 
 
 class NoteListResponse(BaseModel):
-    """笔记列表响应 (游标分页)."""
+    """笔记列表响应."""
 
     notes: list[NoteResponse]
     next_page_token: str | None = None
-
-
-class NoteTagResponse(BaseModel):
-    """标签响应."""
-
-    name: str
-    note_count: int = 0
+    total: int = 0
 
 
 class NoteTagCreate(BaseModel):
-    """创建标签."""
+    """创建标签请求."""
 
     name: str = Field(..., min_length=1, max_length=64)
 
 
 class NoteTagRename(BaseModel):
-    """重命名标签."""
+    """重命名标签请求."""
 
     new_name: str = Field(..., min_length=1, max_length=64)
 
 
-class CreateNoteFromEmailRequest(BaseModel):
-    """从邮件创建笔记 — 前端传入邮件内容."""
+class NoteTagResponse(BaseModel):
+    """标签响应."""
 
-    subject: str = Field(default="", max_length=512)
-    sender: str = Field(default="", max_length=256)
-    body: str = Field(default="", max_length=65536)
-    date: str = Field(default="")
-    folder: str = Field(default="INBOX")
-    uid: int | None = Field(default=None)
-    tags: list[str] = Field(default_factory=lambda: ["email"])
-
-
-class SemanticSearchRequest(BaseModel):
-    """语义搜索请求 — 外部 AI Agent 传入 query + embedding."""
-
-    query: str = Field(default="", description="搜索关键词 (用于记录)")
-    embedding: list[float] = Field(
-        ..., min_length=256, max_length=4096, description="外部 AI 计算的 query embedding 向量"
-    )
-    top_k: int = Field(default=10, ge=1, le=50)
-    tag: str = Field(default="")
-    visibility: str = Field(default="")
+    id: int
+    name: str
+    note_count: int = 0
+    created_at: str | None = None
 
 
 class SemanticSearchItem(BaseModel):
-    """语义搜索结果条目."""
+    """语义搜索结果项."""
 
-    note: NoteResponse
+    id: uuid.UUID
+    content: str
     score: float
+    tags: list[str] = []
+    created_at: datetime | None = None
+    snippet: str = ""
+
+
+class SemanticSearchRequest(BaseModel):
+    """语义搜索请求."""
+
+    query: str = ""
+    embedding: list[float] = []
+    top_k: int = 10
+    tag: str = ""
+    visibility: str = ""
 
 
 class SemanticSearchResponse(BaseModel):
-    """语义搜索结果."""
+    """语义搜索响应."""
 
     results: list[SemanticSearchItem]
 
 
+class CreateNoteFromEmailRequest(BaseModel):
+    """从邮件创建笔记请求."""
+
+    subject: str
+    sender: str
+    body: str
+    date: str
+    folder: str | None = None
+    tags: list[str] = []
+
+
 class FromContextRequest(BaseModel):
-    """从上下文创建笔记 — Agent 专用."""
+    """从外部上下文创建笔记请求 (Agent 专用)."""
 
     content: str = Field(..., min_length=1, max_length=65536)
-    tags: list[str] = Field(default_factory=list, max_length=20)
-    visibility: str = Field(default="private")
-    source: str = Field(default="", description="来源描述 (如 email / chat / agent)")
-    embedding: list[float] | None = Field(
-        default=None, description="可选的 embedding 向量"
-    )
+    tags: list[str] = []
+    visibility: str = "private"
+    source: str = ""
+    embedding: list[float] = []
 
 
 class UnifiedSearchItem(BaseModel):
-    """统一搜索结果条目."""
+    """统一搜索结果项."""
 
     id: str
-    type_: str  # "mail" | "note"
+    type_: str
     title: str
     snippet: str
-    date: str
-    folder: str = ""
     tags: list[str] = []
-    score: float = 0.0
-    uid: int | None = None
+    url: str = ""
+    created_at: str | None = None
 
 
 class UnifiedSearchResponse(BaseModel):

@@ -1,30 +1,5 @@
 """
 Minimail — 笔记库 Note API
-
-路由:
-  - GET    /api/notes                 列表 (游标分页 + 过滤)
-  - POST   /api/notes                 创建
-  - GET    /api/notes/{id}            详情
-  - PUT    /api/notes/{id}            更新
-  - DELETE /api/notes/{id}            删除 (软删除 → archived)
-  - POST   /api/notes/{id}/pin        切换置顶
-  - POST   /api/notes/{id}/restore    恢复归档
-  - GET    /api/notes/tags            用户标签列表
-  - POST   /api/notes/tags            创建标签
-  - DELETE /api/notes/tags/{name}     删除标签 (从所有笔记中移除)
-  - GET    /api/notes/search          全文搜索
-  - POST   /api/notes/search/semantic 语义搜索 (外部 AI 传入 embedding)
-  - POST   /api/notes/{note_id}/reactions 切换反应
-  - POST   /api/notes/{note_id}/attachments 上传附件
-  - GET    /api/notes/{note_id}/attachments 附件列表
-  - POST   /api/notes/{note_id}/comments 创建评论
-  - GET    /api/notes/{note_id}/comments 评论列表
-  - POST   /api/notes/link-metadata   获取链接元数据
-  - GET    /api/files/{attachment_id} 文件下载
-  - POST   /api/notes/from-email      从邮件创建笔记
-  - POST   /api/notes/from-context    从外部上下文创建笔记 (Agent 专用)
-
-参考: https://github.com/usememos/memos
 """
 
 from __future__ import annotations
@@ -61,10 +36,10 @@ from app.schemas.note import (
     SemanticSearchItem,
     SemanticSearchRequest,
     SemanticSearchResponse,
+    extract_note_properties,
 )
 from app.services.auth import get_current_user
 
-# 引入 ORM 模型
 from app.models.note import Note as NoteModel, NoteTag as NoteTagModel, NoteReaction as NoteReactionModel, NoteAttachment as NoteAttachmentModel
 
 router = APIRouter(prefix="/api/notes", tags=["notes"])
@@ -76,7 +51,6 @@ router = APIRouter(prefix="/api/notes", tags=["notes"])
 async def _get_note_or_404(
     note_id: uuid.UUID, user: User, db: AsyncSession
 ) -> NoteModel:
-    """获取笔记, 不存在或不属于当前用户时返回 404."""
     result = await db.execute(
         select(NoteModel).where(
             NoteModel.id == note_id, NoteModel.user_id == user.id
@@ -87,73 +61,63 @@ async def _get_note_or_404(
         raise HTTPException(status_code=404, detail="笔记不存在")
     return note
 
+def _note_to_response(note: NoteModel) -> NoteResponse:
+    """ORM note → NoteResponse (包含计算属性)."""
+    resp = NoteResponse(
+        id=note.id, user_id=note.user_id, content=note.content,
+        visibility=note.visibility, pinned=note.pinned,
+        parent_id=note.parent_id, row_status=note.row_status,
+        tags=note.tags, created_at=note.created_at, updated_at=note.updated_at,
+    )
+    resp.property = extract_note_properties(note.content)
+    return resp
 
-# ─── 列表 (游标分页) ───
+
+# ─── 列表 ───
 
 
 @router.get("", response_model=NoteListResponse)
 async def list_notes(
     page_size: int = Query(default=20, ge=1, le=100),
     cursor: str = Query(default="", description="上一页最后一条的 created_at"),
-    visibility: str = Query(default="", description="private / public / 空=全部"),
+    visibility: str = Query(default="", description="private / public / protected / 空=全部"),
     tag: str = Query(default="", description="按标签过滤"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """获取笔记列表 (游标分页, 按 created_at 倒序)."""
     query = select(NoteModel).where(
         NoteModel.user_id == user.id,
         NoteModel.row_status == "active",
     )
-
-    # 游标过滤: cursor 是上一页最后一条的 created_at ISO 字符串
     if cursor:
         try:
             cursor_dt = datetime.fromisoformat(cursor)
             query = query.where(NoteModel.created_at < cursor_dt)
         except ValueError:
             pass
-
-    # 可见性过滤
-    if visibility in ("private", "public"):
+    if visibility in ("private", "public", "protected"):
         query = query.where(NoteModel.visibility == visibility)
-
-    # 标签过滤
     if tag:
         query = query.where(NoteModel.tags.any(tag))
-
-    # 排序 + 分页
-    query = (
-        query.order_by(NoteModel.created_at.desc())
-        .limit(page_size + 1)  # 多取一条用于判断是否有下一页
-    )
-
+    query = query.order_by(NoteModel.created_at.desc()).limit(page_size + 1)
     result = await db.execute(query)
     notes = result.scalars().all()
-
     has_more = len(notes) > page_size
     if has_more:
         notes = notes[:page_size]
+    next_token = notes[-1].created_at.isoformat() if has_more and notes else ""
 
-    next_token = ""
-    if has_more and notes:
-        next_token = notes[-1].created_at.isoformat()
-
-    # 统计总数
     count_q = select(func.count(NoteModel.id)).where(
-        NoteModel.user_id == user.id,
-        NoteModel.row_status == "active",
+        NoteModel.user_id == user.id, NoteModel.row_status == "active",
     )
-    if visibility in ("private", "public"):
+    if visibility in ("private", "public", "protected"):
         count_q = count_q.where(NoteModel.visibility == visibility)
     if tag:
         count_q = count_q.where(NoteModel.tags.any(tag))
     total_result = await db.execute(count_q)
     total = total_result.scalar() or 0
 
-    # 批量获取反应
     reactions_map = await _batch_get_reactions(db, [n.id for n in notes], user.id)
-
     return NoteListResponse(
         notes=[_note_with_reactions(n, reactions_map.get(n.id, [])) for n in notes],
         next_page_token=next_token,
@@ -170,7 +134,6 @@ async def create_note(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """创建新笔记."""
     note = NoteModel(
         user_id=user.id,
         content=body.content,
@@ -188,10 +151,23 @@ async def create_note(
         for tag_name in body.tags:
             await _upsert_tag_count(tag_name, user.id, db, delta=1)
 
-    return NoteResponse.model_validate(note)
+    # 自动标签: 从内容中提取 #tag
+    tags_from_content = extract_note_properties(note.content).auto_tags
+    if tags_from_content:
+        new_tags = list(set(note.tags + tags_from_content))
+        if len(new_tags) != len(note.tags):
+            note.tags = new_tags
+            await db.flush()
+            for t in tags_from_content:
+                await _upsert_tag_count(t, user.id, db, delta=1)
+
+    # 重新查询以确保所有属性已加载
+    result = await db.execute(select(NoteModel).where(NoteModel.id == note.id))
+    fresh_note = result.scalar_one_or_none()
+    return _note_to_response(fresh_note or note)
 
 
-# ─── 详情 ───
+# ─── 标签管理 ───
 
 
 @router.get("/tags", response_model=list[NoteTagResponse])
@@ -199,7 +175,6 @@ async def list_tags(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """获取当前用户的所有标签 (含计数)."""
     result = await db.execute(
         select(NoteTagModel).where(
             NoteTagModel.user_id == user.id
@@ -215,7 +190,6 @@ async def create_tag(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """创建标签 (如果已存在则返回现有)."""
     result = await db.execute(
         select(NoteTagModel).where(
             NoteTagModel.name == body.name.strip(),
@@ -225,12 +199,7 @@ async def create_tag(
     existing = result.scalar_one_or_none()
     if existing:
         return NoteTagResponse(name=existing.name, note_count=existing.note_count)
-
-    tag = NoteTagModel(
-        name=body.name.strip(),
-        user_id=user.id,
-        note_count=0,
-    )
+    tag = NoteTagModel(name=body.name.strip(), user_id=user.id, note_count=0)
     db.add(tag)
     await db.flush()
     await db.refresh(tag)
@@ -244,8 +213,6 @@ async def rename_tag(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """重命名标签 (更新所有笔记中的标签名称)."""
-    # 检查源标签是否存在
     result = await db.execute(
         select(NoteTagModel).where(
             NoteTagModel.name == tag_name,
@@ -255,25 +222,15 @@ async def rename_tag(
     tag_row = result.scalar_one_or_none()
     if not tag_row:
         raise HTTPException(status_code=404, detail="标签不存在")
-
     new_name = body.new_name.strip()
     if new_name == tag_name:
         return NoteTagResponse(name=tag_row.name, note_count=tag_row.note_count)
-
-    # 更新所有笔记: tags 数组中替换
+    # 更新所有笔记
     await db.execute(
         sqlalchemy.update(NoteModel)
-        .where(
-            NoteModel.user_id == user.id,
-            NoteModel.tags.any(tag_name),
-        )
-        .values(
-            tags=func.array_replace(NoteModel.tags, tag_name, new_name)
-        )
+        .where(NoteModel.user_id == user.id, NoteModel.tags.any(tag_name))
+        .values(tags=func.array_replace(NoteModel.tags, tag_name, new_name))
     )
-
-    # 更新聚合表
-    # 检查目标标签是否已存在
     result2 = await db.execute(
         select(NoteTagModel).where(
             NoteTagModel.name == new_name,
@@ -282,17 +239,14 @@ async def rename_tag(
     )
     target = result2.scalar_one_or_none()
     if target:
-        # 合并: 计数相加, 删除源
         target.note_count += tag_row.note_count
         await db.delete(tag_row)
         await db.flush()
         return NoteTagResponse(name=target.name, note_count=target.note_count)
-    else:
-        # 直接重命名
-        tag_row.name = new_name
-        await db.flush()
-        await db.refresh(tag_row)
-        return NoteTagResponse(name=tag_row.name, note_count=tag_row.note_count)
+    tag_row.name = new_name
+    await db.flush()
+    await db.refresh(tag_row)
+    return NoteTagResponse(name=tag_row.name, note_count=tag_row.note_count)
 
 
 @router.delete("/tags/{tag_name:path}", status_code=204)
@@ -301,20 +255,11 @@ async def delete_tag(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """删除标签 (从所有笔记中移除)."""
-    # 从所有笔记中移除该标签
     await db.execute(
         sqlalchemy.update(NoteModel)
-        .where(
-            NoteModel.user_id == user.id,
-            NoteModel.tags.any(tag_name),
-        )
-        .values(
-            tags=func.array_remove(NoteModel.tags, tag_name)
-        )
+        .where(NoteModel.user_id == user.id, NoteModel.tags.any(tag_name))
+        .values(tags=func.array_remove(NoteModel.tags, tag_name))
     )
-
-    # 删除聚合记录
     await db.execute(
         sqlalchemy.delete(NoteTagModel).where(
             NoteTagModel.name == tag_name,
@@ -337,58 +282,36 @@ async def search_notes(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """全文搜索笔记 (PostgreSQL tsvector)."""
     query = select(NoteModel).where(
         NoteModel.user_id == user.id,
         NoteModel.row_status == "active",
     )
-
-    # 全文搜索
     if q.strip():
         ts_query = func.plainto_tsquery("simple", q.strip())
         query = query.where(
             func.to_tsvector("simple", NoteModel.content).op("@@")(ts_query)
-        )
-        # 按相关性排序
-        query = query.order_by(
-            func.ts_rank(
-                func.to_tsvector("simple", NoteModel.content), ts_query
-            ).desc()
-        )
+        ).order_by(func.ts_rank(func.to_tsvector("simple", NoteModel.content), ts_query).desc())
     else:
         query = query.order_by(NoteModel.created_at.desc())
-
-    # 游标过滤
     if cursor:
         try:
             cursor_dt = datetime.fromisoformat(cursor)
             query = query.where(NoteModel.created_at < cursor_dt)
         except ValueError:
             pass
-
-    # 可见性过滤
-    if visibility in ("private", "public"):
+    if visibility in ("private", "public", "protected"):
         query = query.where(NoteModel.visibility == visibility)
-
-    # 标签过滤
     if tag:
         query = query.where(NoteModel.tags.any(tag))
-
-    # 分页
     query = query.limit(page_size + 1)
     result = await db.execute(query)
     notes = result.scalars().all()
-
     has_more = len(notes) > page_size
     if has_more:
         notes = notes[:page_size]
-
-    next_token = ""
-    if has_more and notes:
-        next_token = notes[-1].created_at.isoformat()
-
+    next_token = notes[-1].created_at.isoformat() if has_more and notes else ""
     return NoteListResponse(
-        notes=[NoteResponse.model_validate(n) for n in notes],
+        notes=[_note_to_response(n) for n in notes],
         next_page_token=next_token,
         total=0,
     )
@@ -400,7 +323,6 @@ async def get_note(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """获取单条笔记详情 (含反应)."""
     note = await _get_note_or_404(note_id, user, db)
     reactions = await _get_reactions_for_note(db, note_id, user.id)
     return _note_with_reactions(note, reactions)
@@ -416,14 +338,20 @@ async def update_note(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """更新笔记 (部分更新)."""
     note = await _get_note_or_404(note_id, user, db)
-
     update_fields = False
 
     if body.content is not None and body.content != note.content:
         note.content = body.content
         update_fields = True
+        # 重新提取自动标签
+        auto_tags = extract_note_properties(note.content).auto_tags
+        old_auto = [t for t in note.tags if not t.startswith("_")]
+        new_tags = list(set(note.tags + auto_tags))
+        if len(new_tags) != len(note.tags):
+            note.tags = new_tags
+            for t in auto_tags:
+                await _upsert_tag_count(t, user.id, db, delta=1)
     if body.visibility is not None and body.visibility != note.visibility:
         note.visibility = body.visibility
         update_fields = True
@@ -434,11 +362,10 @@ async def update_note(
         note.row_status = body.row_status
         update_fields = True
     if body.tags is not None:
-        # 计算标签变更
         old_tags = set(note.tags)
-        new_tags = set(body.tags)
-        added = new_tags - old_tags
-        removed = old_tags - new_tags
+        new_tags_set = set(body.tags)
+        added = new_tags_set - old_tags
+        removed = old_tags - new_tags_set
         if added or removed:
             note.tags = body.tags
             update_fields = True
@@ -448,11 +375,10 @@ async def update_note(
                 await _upsert_tag_count(t, user.id, db, delta=-1)
 
     if not update_fields:
-        return NoteResponse.model_validate(note)
-
+        return _note_to_response(note)
     await db.flush()
     await db.refresh(note)
-    return NoteResponse.model_validate(note)
+    return _note_to_response(note)
 
 
 # ─── 删除 (软删除) ───
@@ -464,7 +390,6 @@ async def delete_note(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """删除笔记 (软删除 → row_status=archived)."""
     note = await _get_note_or_404(note_id, user, db)
     note.row_status = "archived"
     await db.flush()
@@ -479,12 +404,11 @@ async def toggle_pin(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """切换笔记置顶状态."""
     note = await _get_note_or_404(note_id, user, db)
     note.pinned = not note.pinned
     await db.flush()
     await db.refresh(note)
-    return NoteResponse.model_validate(note)
+    return _note_to_response(note)
 
 
 # ─── 恢复归档 ───
@@ -496,12 +420,14 @@ async def restore_note(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """恢复归档笔记."""
     note = await _get_note_or_404(note_id, user, db)
     note.row_status = "active"
     await db.flush()
     await db.refresh(note)
-    return NoteResponse.model_validate(note)
+    return _note_to_response(note)
+
+
+# ─── 语义搜索 ───
 
 
 @router.post("/search/semantic", response_model=SemanticSearchResponse)
@@ -510,12 +436,6 @@ async def semantic_search(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """语义搜索 — 外部 AI Agent 传入 embedding 向量, 返回最相似笔记.
-
-    外部 AI 使用自身的 embedding 模型计算 query 向量后传入,
-    Minimail 仅作为向量存储和检索后端, 不做 embedding 计算.
-    """
-    # 构建基础查询
     query = select(
         NoteModel,
         NoteModel.embedding.cosine_distance(body.embedding).label("score"),
@@ -524,28 +444,20 @@ async def semantic_search(
         NoteModel.row_status == "active",
         NoteModel.embedding.isnot(None),
     )
-
-    # 标签过滤
     if body.tag:
         query = query.where(NoteModel.tags.any(body.tag))
-
-    # 可见性过滤
-    if body.visibility in ("private", "public"):
+    if body.visibility in ("private", "public", "protected"):
         query = query.where(NoteModel.visibility == body.visibility)
-
     query = query.order_by(sqlalchemy.text("score ASC")).limit(body.top_k)
-
     result = await db.execute(query)
     rows = result.all()
-
     items = [
         SemanticSearchItem(
-            note=NoteResponse.model_validate(row.NoteModel),
+            note=_note_to_response(row.NoteModel),
             score=float(round((1 - row.score) * 100, 2)),
         )
         for row in rows
     ]
-
     return SemanticSearchResponse(results=items)
 
 
@@ -555,49 +467,34 @@ async def create_from_context(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """从外部上下文创建笔记 — Agent 专用端点.
-
-    外部 AI Agent 可将对话记录、邮件内容等传入,
-    系统自动创建笔记并可选存入 embedding 向量.
-    """
-    # 源信息作为备注写入内容首行
     source_prefix = f"> *来源: {body.source}*\n\n" if body.source else ""
-
     note = NoteModel(
         content=source_prefix + body.content.strip(),
         user_id=user.id,
         tags=list(set(t.strip() for t in body.tags if t.strip())),
         visibility=body.visibility,
     )
-
     if body.embedding:
         note.embedding = body.embedding
-
     db.add(note)
     await db.flush()
     await db.refresh(note)
-
-    # 更新标签计数
     for tag_name in note.tags:
         await _upsert_tag_count(tag_name, user.id, db, delta=1)
+    return _note_to_response(note)
 
-    return NoteResponse.model_validate(note)
+
+# ─── 反应 ───
 
 
 @router.post("/{note_id}/reactions", response_model=NoteResponseWithReactions)
 async def toggle_reaction(
-    emoji: str = Query(..., min_length=1, max_length=32, description="Emoji 字符"),
+    emoji: str = Query(..., min_length=1, max_length=32),
     note_id: uuid.UUID = Path(...),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """切换笔记反应 — 添加或移除 Emoji.
-
-    如果用户已对该笔记使用此 Emoji → 移除 (取消反应)
-    如果未使用 → 添加
-    """
     note = await _get_note_or_404(note_id, user, db)
-
     result = await db.execute(
         select(NoteReactionModel).where(
             NoteReactionModel.note_id == note_id,
@@ -606,21 +503,12 @@ async def toggle_reaction(
         )
     )
     existing = result.scalar_one_or_none()
-
     if existing:
         await db.delete(existing)
     else:
-        reaction = NoteReactionModel(
-            note_id=note_id,
-            user_id=user.id,
-            emoji=emoji,
-        )
-        db.add(reaction)
-
+        db.add(NoteReactionModel(note_id=note_id, user_id=user.id, emoji=emoji))
     await db.flush()
     await db.refresh(note)
-
-    # Rebuild reactions for response
     reactions = await _get_reactions_for_note(db, note_id, user.id)
     return _note_with_reactions(note, reactions)
 
@@ -635,34 +523,22 @@ async def upload_attachment(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """上传笔记附件."""
     await _get_note_or_404(note_id, user, db)
-
-    # 保存文件
     upload_dir = FilePath(__file__).resolve().parent.parent.parent / "uploads" / "notes"
     upload_dir.mkdir(parents=True, exist_ok=True)
-
     file_id = uuid.uuid4()
     ext = FilePath(file.filename or "file").suffix if file.filename else ""
     save_name = f"{file_id}{ext}"
     save_path = upload_dir / save_name
-
     content = await file.read()
     save_path.write_bytes(content)
-
-    # 写数据库
     att = NoteAttachmentModel(
-        id=file_id,
-        note_id=note_id,
-        filename=file.filename or "unnamed",
-        filepath=str(save_path),
-        size=len(content),
-        mime_type=file.content_type or "application/octet-stream",
+        id=file_id, note_id=note_id, filename=file.filename or "unnamed",
+        filepath=str(save_path), size=len(content), mime_type=file.content_type or "application/octet-stream",
     )
     db.add(att)
     await db.flush()
     await db.refresh(att)
-
     return _attachment_to_response(att)
 
 
@@ -672,7 +548,6 @@ async def list_attachments(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """获取笔记附件列表."""
     await _get_note_or_404(note_id, user, db)
     result = await db.execute(
         select(NoteAttachmentModel).where(NoteAttachmentModel.note_id == note_id)
@@ -681,7 +556,7 @@ async def list_attachments(
     return [_attachment_to_response(a) for a in result.scalars().all()]
 
 
-# ─── 评论/线程 ───
+# ─── 评论 ───
 
 
 @router.post("/{note_id}/comments", response_model=NoteResponse, status_code=201)
@@ -691,20 +566,15 @@ async def create_comment(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """对笔记添加评论."""
     parent = await _get_note_or_404(note_id, user, db)
-
     comment = NoteModel(
-        content=body.content,
-        user_id=user.id,
-        parent_id=note_id,
-        visibility=parent.visibility,
-        tags=[],
+        content=body.content, user_id=user.id, parent_id=note_id,
+        visibility=parent.visibility, tags=[],
     )
     db.add(comment)
     await db.flush()
     await db.refresh(comment)
-    return NoteResponse.model_validate(comment)
+    return _note_to_response(comment)
 
 
 @router.get("/{note_id}/comments", response_model=list[NoteResponse])
@@ -713,15 +583,13 @@ async def list_comments(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """获取笔记的评论列表."""
     await _get_note_or_404(note_id, user, db)
     result = await db.execute(
         select(NoteModel).where(
-            NoteModel.parent_id == note_id,
-            NoteModel.row_status == "active",
+            NoteModel.parent_id == note_id, NoteModel.row_status == "active",
         ).order_by(NoteModel.created_at.asc())
     )
-    return [NoteResponse.model_validate(c) for c in result.scalars().all()]
+    return [_note_to_response(c) for c in result.scalars().all()]
 
 
 # ─── 链接元数据 ───
@@ -732,34 +600,29 @@ async def get_link_metadata(
     body: LinkMetadataRequest,
     user: User = Depends(get_current_user),
 ):
-    """获取 URL 的 Open Graph 元数据."""
     try:
         import httpx
         from bs4 import BeautifulSoup
-
         async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
             resp = await client.get(body.url, headers={"User-Agent": "Minimail/1.0"})
             resp.raise_for_status()
             html = resp.text
-
         soup = BeautifulSoup(html, "html.parser")
 
         def _og(key: str) -> str:
             tag = soup.find("meta", property=f"og:{key}") or soup.find("meta", attrs={"name": f"og:{key}"})
             return tag.get("content", "") if tag else ""
 
-        title = _og("title") or soup.title.string.strip() if soup.title else ""
-        description = _og("description") or ""
-        image = _og("image") or ""
-
+        title = _og("title") or (soup.title.string.strip() if soup.title else "")
         return LinkMetadataResponse(
-            url=body.url,
-            title=title[:500],
-            description=description[:1000],
-            image=image[:1000],
+            url=body.url, title=title[:500],
+            description=_og("description")[:1000], image=_og("image")[:1000],
         )
     except Exception:
         return LinkMetadataResponse(url=body.url)
+
+
+# ─── 从邮件创建笔记 ───
 
 
 @router.post("/{note_id}/from-email", response_model=NoteResponse, status_code=201)
@@ -768,37 +631,20 @@ async def create_note_from_email(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """从邮件内容创建笔记 — 前端直接传入邮件字段."""
-    # 格式化笔记内容
-    lines = [f"# 📧 {body.subject or '无主题'}"]
-    lines.append("")
-    lines.append(f"> **发件人**: {body.sender}")
-    lines.append(f"> **日期**: {body.date}")
+    lines = [f"# 📧 {body.subject or '无主题'}", "",
+             f"> **发件人**: {body.sender}", f"> **日期**: {body.date}"]
     if body.folder:
         lines.append(f"> **文件夹**: {body.folder}")
-    lines.append("")
-    lines.append("---")
-    lines.append("")
-    lines.append(body.body.strip())
-
+    lines.extend(["", "---", "", body.body.strip()])
     content = "\n".join(lines)
-
     tags = list(set(t.strip() for t in body.tags if t.strip()))
-
-    note = NoteModel(
-        content=content,
-        user_id=user.id,
-        tags=tags,
-        visibility="private",
-    )
+    note = NoteModel(content=content, user_id=user.id, tags=tags, visibility="private")
     db.add(note)
     await db.flush()
     await db.refresh(note)
-
     for tag_name in note.tags:
         await _upsert_tag_count(tag_name, user.id, db, delta=1)
-
-    return NoteResponse.model_validate(note)
+    return _note_to_response(note)
 
 
 # ─── 内部辅助 ───
@@ -807,11 +653,9 @@ async def create_note_from_email(
 async def _upsert_tag_count(
     tag_name: str, user_id: uuid.UUID, db: AsyncSession, delta: int = 1
 ) -> None:
-    """更新标签计数 (增/减)."""
     result = await db.execute(
         select(NoteTagModel).where(
-            NoteTagModel.name == tag_name,
-            NoteTagModel.user_id == user_id,
+            NoteTagModel.name == tag_name, NoteTagModel.user_id == user_id,
         )
     )
     tag_row = result.scalar_one_or_none()
@@ -825,83 +669,55 @@ async def _upsert_tag_count(
 async def _get_reactions_for_note(
     db: AsyncSession, note_id: uuid.UUID, current_user_id: uuid.UUID
 ) -> list[NoteReactionResponse]:
-    """聚合笔记的反应，统计每个 emoji 的计数和当前用户是否已反应."""
+    from collections import Counter
     result = await db.execute(
         select(NoteReactionModel).where(NoteReactionModel.note_id == note_id)
     )
     rows = result.scalars().all()
-
-    from collections import Counter
-
     emoji_counts = Counter(r.emoji for r in rows)
     user_emojis = {r.emoji for r in rows if r.user_id == current_user_id}
-
-    return [
-        NoteReactionResponse(emoji=e, count=c, reacted=e in user_emojis)
-        for e, c in sorted(emoji_counts.items())
-    ]
+    return [NoteReactionResponse(emoji=e, count=c, reacted=e in user_emojis) for e, c in sorted(emoji_counts.items())]
 
 
 async def _batch_get_reactions(
     db: AsyncSession, note_ids: list[uuid.UUID], current_user_id: uuid.UUID
 ) -> dict[uuid.UUID, list[NoteReactionResponse]]:
-    """批量获取多条笔记的反应."""
+    from collections import defaultdict, Counter
     if not note_ids:
         return {}
-
     result = await db.execute(
         select(NoteReactionModel).where(NoteReactionModel.note_id.in_(note_ids))
     )
     rows = result.scalars().all()
-
-    from collections import defaultdict, Counter
-
-    # Group by note_id
     by_note: dict[uuid.UUID, list[NoteReactionModel]] = defaultdict(list)
     for r in rows:
         by_note[r.note_id].append(r)
-
     result_map: dict[uuid.UUID, list[NoteReactionResponse]] = {}
     for nid in note_ids:
         note_reactions = by_note.get(nid, [])
         emoji_counts = Counter(r.emoji for r in note_reactions)
         user_emojis = {r.emoji for r in note_reactions if r.user_id == current_user_id}
-        result_map[nid] = [
-            NoteReactionResponse(emoji=e, count=c, reacted=e in user_emojis)
-            for e, c in sorted(emoji_counts.items())
-        ]
-
+        result_map[nid] = [NoteReactionResponse(emoji=e, count=c, reacted=e in user_emojis) for e, c in sorted(emoji_counts.items())]
     return result_map
 
 
 def _note_with_reactions(
     note: NoteModel, reactions: list[NoteReactionResponse]
 ) -> NoteResponseWithReactions:
-    """为笔记添加反应数据."""
-    base = NoteResponse.model_validate(note)
+    props = extract_note_properties(note.content)
     return NoteResponseWithReactions(
-        id=base.id,
-        user_id=base.user_id,
-        content=base.content,
-        visibility=base.visibility,
-        pinned=base.pinned,
-        parent_id=base.parent_id,
-        row_status=base.row_status,
-        tags=base.tags,
-        created_at=base.created_at,
-        updated_at=base.updated_at,
-        reactions=reactions,
+        id=note.id, user_id=note.user_id, content=note.content,
+        visibility=note.visibility, pinned=note.pinned, parent_id=note.parent_id,
+        row_status=note.row_status, tags=note.tags,
+        created_at=note.created_at, updated_at=note.updated_at,
+        reactions=reactions, property=props,
     )
 
 
 def _attachment_to_response(att: NoteAttachmentModel) -> NoteAttachmentResponse:
-    """ORM attachment → response."""
     return NoteAttachmentResponse(
-        id=str(att.id),
-        note_id=str(att.note_id),
-        filename=att.filename,
-        size=att.size,
-        mime_type=att.mime_type,
+        id=str(att.id), note_id=str(att.note_id), filename=att.filename,
+        size=att.size, mime_type=att.mime_type,
         created_at=att.created_at.isoformat() if att.created_at else None,
         url=f"/api/files/{att.id}",
     )
