@@ -7,6 +7,57 @@
 
 ---
 
+## 0.13 — 2026-07-07
+
+### 修复
+
+#### 🔴 CRITICAL
+- **contacts.py 无限递归**: `from app.services.contact import update_contact` 与路由 handler 同名，递归调用自身导致栈溢出 → 重命名 import 为 `svc_update_contact`
+- **smtp_service.py Fernet 密钥不一致**: 手动 `Fernet(key.encode())` 派生与集中管理的 `_make_fernet_key()` 不同，加密密码无法解密 → 统一使用 `_decrypt_password()`
+- **settings.py + mail.py Fernet 多处不一致**: 3 处独立 Fernet 实例化导致密钥不兼容 → 全部收敛到 `_decrypt_password()`
+
+#### HIGH
+- **ComposePage setTimeout 内存泄漏**: 发送成功后 `setTimeout` 未清理 → 添加 `sendTimerRef` + unmount cleanup
+- **MemosPage 异步操作未处理**: `handleSave/handleDelete/handleTogglePin` 未 try/catch → API 失败时前端崩溃 → 包装
+- **stores/memos.ts Zustand v5**: 非 curried form `create<NotesState>(set => ...)` → `create<NotesState>()((set) => ...)`
+
+#### MEDIUM
+- **NoteTagResponse.id 必填 → list_tags 422**: 聚合查询不返回 id，Pydantic 校验失败 → `id: int | None = None`
+- **NoteResponseWithReactions 字段重复**: 与 NoteResponse 完全相同的字段重复声明 → 改为继承
+- **NoteListResponse.notes 类型固定**: 无法容纳含 reactions 的响应 → 改为 union 类型
+- **Tags API 返回状态码**: list_tags 返回码不一致 → 修复
+- **6 处 `any` 类型**: auth.ts, SetupPage, ProfilePanel, TagsManager, MailLayout, SettingsPage → `unknown` + 类型断言
+- **PreviewPane 反模式**: `document.getElementById` DOM 操作 → React state
+- **前端多处未使用 import**: ApiKeysPanel/SearchPanel/Contacts/MailLayout → 清理
+- **package.json 缺少 dayjs**: 其他组件引用但未声明 → 补充
+
+#### 部署
+- **Docker Compose**: ENCRYPTION_KEY 必填变量、alembic 启动前迁移、端口 80:80
+- **requirements.txt**: 补充 sse-starlette/beautifulsoup4/dnspython
+- **nginx.conf**: SSE 不缓冲、X-Forwarded-For、client_max_body_size 50M
+- **Dockerfile**: 后端 HEALTHCHECK + libpq-dev、前端 npm ci + nginx HEALTHCHECK
+- **docker/.env.example**: 部署配置模板
+
+#### UI
+- **系统文档 HTML 乱码**: 后端返回 HTML 片段，前端用 `ReactMarkdown` 渲染导致 HTML 标签显示为纯文本 → 改用 `dangerouslySetInnerHTML`
+
+### 改进
+- 全量 UI 美化（统一 55px Header、侧栏样式、笔记卡片 hover）
+- 前端分包优化（vendor 96kB / editor 412kB / app 430kB，chunk 警告消除）
+- 后端统一错误处理（全局 Exception handler）
+- 侧栏重构（笔记库独立折叠分区）
+- 全量代码审计（3 轮，36 文件修改，0 TypeScript 错误）
+- Git 历史脱敏（filter-branch 清理 30 commits）
+
+### 文档
+- 部署指南: 开发/生产/Docker/Nginx/SSL/备份
+- README_EN.md: 同步中文版 v0.12-13 功能
+- INSTALL.md/PROGRESS.md: 更新到 v0.13 进度
+- 操作指南 7 篇 + API 参考 7 篇 + 入口索引
+- _devdocs/ 25 篇开发记录 (gitignored)
+
+---
+
 ## 0.12 — 2026-07-07
 
 ### 新增
