@@ -35,6 +35,7 @@ from sqlalchemy.future import select
 from app.database import get_db
 from app.models.user import User
 from app.schemas.note import (
+    CreateNoteFromEmailRequest,
     FromContextRequest,
     NoteCreate,
     NoteListResponse,
@@ -559,6 +560,45 @@ async def create_from_context(
     await db.refresh(note)
 
     # 更新标签计数
+    for tag_name in note.tags:
+        await _upsert_tag_count(tag_name, user.id, db, delta=1)
+
+    return NoteResponse.model_validate(note)
+
+
+@router.post("/from-email", response_model=NoteResponse, status_code=201)
+async def create_note_from_email(
+    body: CreateNoteFromEmailRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """从邮件内容创建笔记 — 前端直接传入邮件字段."""
+    # 格式化笔记内容
+    lines = [f"# 📧 {body.subject or '无主题'}"]
+    lines.append("")
+    lines.append(f"> **发件人**: {body.sender}")
+    lines.append(f"> **日期**: {body.date}")
+    if body.folder:
+        lines.append(f"> **文件夹**: {body.folder}")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append(body.body.strip())
+
+    content = "\n".join(lines)
+
+    tags = list(set(t.strip() for t in body.tags if t.strip()))
+
+    note = NoteModel(
+        content=content,
+        user_id=user.id,
+        tags=tags,
+        visibility="private",
+    )
+    db.add(note)
+    await db.flush()
+    await db.refresh(note)
+
     for tag_name in note.tags:
         await _upsert_tag_count(tag_name, user.id, db, delta=1)
 

@@ -1,6 +1,8 @@
 import { useState, useRef } from 'react';
 import { useMailStore } from '@/stores/mail';
 import UserMenu from '@/features/user/UserMenu';
+import SearchPanel from '@/features/search/SearchPanel';
+import type { UnifiedSearchItem } from '@/api/search';
 
 export default function Toolbar() {
   const setActiveView = useMailStore((s) => s.setActiveView);
@@ -21,6 +23,8 @@ export default function Toolbar() {
 
   const [searchInput, setSearchInput] = useState(searchQuery);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showGlobalSearch, setShowGlobalSearch] = useState(false);
+  const [globalQuery, setGlobalQuery] = useState('');
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -46,13 +50,14 @@ export default function Toolbar() {
 
       {/* Search bar + filter toggle */}
       <div className="relative flex-1 max-w-md">
-        <input
-          type="text"
-          value={searchInput}
-          onChange={handleSearchChange}
-          placeholder="搜索邮件..."
-          className="w-full pl-8 pr-16 py-1.5 text-sm border border-gray-300 rounded-full bg-gray-50 focus:bg-white focus:border-[#066da5] focus:outline-none focus:ring-1 focus:ring-[#066da5] transition-colors"
-        />
+      <input
+        type="text"
+        value={searchInput}
+        onChange={handleSearchChange}
+        onFocus={() => { setShowGlobalSearch(true); setGlobalQuery(searchInput); }}
+        placeholder="搜索邮件..."
+        className="w-full pl-8 pr-20 py-1.5 text-sm border border-gray-300 rounded-full bg-gray-50 focus:bg-white focus:border-[#066da5] focus:outline-none focus:ring-1 focus:ring-[#066da5] transition-colors"
+      />
         <svg
           className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
           fill="none" stroke="currentColor" viewBox="0 0 24 24"
@@ -90,7 +95,31 @@ export default function Toolbar() {
             </svg>
           </button>
         )}
+
+        {/* Global search toggle */}
+        <button
+          onClick={() => { setShowGlobalSearch(!showGlobalSearch); setGlobalQuery(searchInput); }}
+          className={`absolute right-14 top-1/2 -translate-y-1/2 p-0.5 rounded text-gray-400 hover:text-[#066da5] transition-colors`}
+          title="全局搜索"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </button>
       </div>
+
+      {/* Global search panel */}
+      {showGlobalSearch && (
+        <SearchPanel
+          query={globalQuery}
+          onClose={() => setShowGlobalSearch(false)}
+          onSelectItem={(item) => {
+            if (item.type_ === 'note') {
+              setActiveView('memos');
+            }
+          }}
+        />
+      )}
 
       {/* Quick action buttons */}
       <div className="flex items-center gap-1">

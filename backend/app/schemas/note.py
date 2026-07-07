@@ -112,7 +112,42 @@ class FromContextRequest(BaseModel):
     )
 
 
+class CreateNoteFromEmailRequest(BaseModel):
+    """从邮件创建笔记 — 前端传入邮件内容."""
+
+    subject: str = Field(default="", max_length=512)
+    sender: str = Field(default="", max_length=256)
+    body: str = Field(default="", max_length=65536)
+    date: str = Field(default="")
+    folder: str = Field(default="INBOX")
+    uid: int | None = Field(default=None)
+    tags: list[str] = Field(default_factory=lambda: ["email"])
+
+
+class UnifiedSearchItem(BaseModel):
+    """统一搜索结果条目."""
+
+    id: str
+    type_: str  # "mail" | "note"
+    title: str
+    snippet: str
+    date: str
+    folder: str = ""
+    tags: list[str] = []
+    score: float = 0.0
+    uid: int | None = None
+
+
+class UnifiedSearchResponse(BaseModel):
+    """统一搜索结果."""
+
+    results: list[UnifiedSearchItem]
+    total: int
+    query: str
+
+
 class NoteSearchQuery(BaseModel):
+
     """搜索参数 (GET query)."""
 
     q: str = Field(default="", description="全文搜索关键词")

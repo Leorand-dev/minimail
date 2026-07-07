@@ -1,6 +1,8 @@
 
 import { useMailStore } from '@/stores/mail';
-import { getAttachmentUrl } from '@/api/mail';
+import { getAttachmentUrl, type MessageSummary } from '@/api/mail';
+import { createNoteFromEmail } from '@/api/memos';
+import { useNotesStore } from '@/stores/memos';
 
 interface PreviewPaneProps {
   className?: string;
@@ -113,6 +115,31 @@ export default function PreviewPane({ className = '' }: PreviewPaneProps) {
     setActiveView('compose');
   };
 
+  const handleSaveToNotes = async () => {
+    try {
+      await createNoteFromEmail({
+        subject: msg.subject,
+        sender: fromAddr,
+        body: msg.text_plain || msg.text_html?.replace(/<[^>]+>/g, '') || '',
+        date: new Date(msg.date).toISOString(),
+        folder: currentFolder,
+        tags: ['email'],
+      });
+      // Show success feedback
+      const btn = document.getElementById('save-to-notes-btn');
+      if (btn) {
+        btn.textContent = '✅ 已保存';
+        setTimeout(() => { btn.textContent = '📝 转为笔记'; }, 2000);
+      }
+    } catch {
+      const btn = document.getElementById('save-to-notes-btn');
+      if (btn) {
+        btn.textContent = '❌ 保存失败';
+        setTimeout(() => { btn.textContent = '📝 转为笔记'; }, 2000);
+      }
+    }
+  };
+
   return (
     <div className={`${className} flex flex-col bg-white border-l border-gray-200 min-w-0`}>
       {/* Header */}
@@ -138,6 +165,12 @@ export default function PreviewPane({ className = '' }: PreviewPaneProps) {
               className="px-2.5 py-1 text-xs text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
               title="转发"
             >↗ 转发</button>
+            <button
+              id="save-to-notes-btn"
+              onClick={handleSaveToNotes}
+              className="px-2.5 py-1 text-xs text-emerald-700 border border-emerald-300 rounded hover:bg-emerald-50"
+              title="转为笔记保存"
+            >📝 转为笔记</button>
           </div>
         </div>
 

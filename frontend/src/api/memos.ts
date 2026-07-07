@@ -154,3 +154,16 @@ export async function createNoteFromContext(params: {
   const res = await api.post('/notes/from-context', params);
   return res.data;
 }
+
+/** 从邮件创建笔记 */
+export async function createNoteFromEmail(params: {
+  subject: string;
+  sender: string;
+  body: string;
+  date: string;
+  folder?: string;
+  tags?: string[];
+}): Promise<Note> {
+  const res = await api.post('/notes/from-email', params);
+  return res.data;
+}
