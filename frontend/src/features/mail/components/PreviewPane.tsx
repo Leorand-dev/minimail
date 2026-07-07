@@ -2,7 +2,6 @@
 import { useMailStore } from '@/stores/mail';
 import { getAttachmentUrl } from '@/api/mail';
 import { createNoteFromEmail } from '@/api/memos';
-import { useNotesStore } from '@/stores/memos';
 
 interface PreviewPaneProps {
   className?: string;

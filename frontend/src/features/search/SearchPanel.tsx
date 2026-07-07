@@ -4,7 +4,7 @@
  * 跨邮件 + 笔记库的全局搜索.
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { unifiedSearch, type UnifiedSearchItem } from '@/api/search';
 
 interface SearchPanelProps {

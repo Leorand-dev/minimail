@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useMailStore } from '@/stores/mail';
 import { fetchFolders, fetchMessages, searchMessages as searchApi } from '@/api/mail';
 import api from '@/api/client';
@@ -241,7 +241,7 @@ export default function MailLayout() {
 
         {activeView === 'compose' && <ComposeContent onBack={() => setActiveView('mail')} />}
         {activeView === 'settings' && <SettingsContent onBack={() => setActiveView('mail')} />}
-        {activeView === 'contacts' && <ContactsContent onBack={() => setActiveView('mail')} />}
+        {activeView === 'contacts' && <ContactsContent />}
         {activeView === 'apikeys' && <ApiKeysContent />}
         {activeView === 'profile' && <ProfilePanel />}
         {activeView === 'docs' && <DocsPage />}

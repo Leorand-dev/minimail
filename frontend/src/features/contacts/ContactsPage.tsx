@@ -2,10 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { fetchContacts, createContact, updateContact, deleteContact, fetchGroups } from '@/api/contacts';
 import type { Contact, ContactGroup } from '@/api/contacts';
 
-interface ContactsPageProps {
-  onBack?: () => void;
-}
-export default function ContactsPage({ onBack }: ContactsPageProps) {
+export default function ContactsPage() {
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');

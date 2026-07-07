@@ -37,7 +37,7 @@ class ApiToken(Base):
         DateTime(timezone=True), server_default=func.now()
     )
 
-    user = relationship("User", backref="api_tokens")
+    user = relationship("User", back_populates="api_tokens")
 
     def __repr__(self) -> str:
         return f"<ApiToken id={self.id} name={self.name}>"

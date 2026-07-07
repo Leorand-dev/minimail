@@ -97,23 +97,10 @@ class NoteResponse(BaseModel):
     model_config = {"from_attributes": True}  # type: ignore[arg-type]
 
 
-class NoteResponseWithReactions(BaseModel):
+class NoteResponseWithReactions(NoteResponse):
     """笔记响应 (含反应)."""
 
-    id: uuid.UUID
-    user_id: uuid.UUID
-    content: str
-    visibility: str = "private"
-    pinned: bool = False
-    parent_id: uuid.UUID | None = None
-    row_status: str = "active"
-    tags: list[str] = []
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
     reactions: list[NoteReactionResponse] = []
-    property: NoteProperty | None = None
-
-    model_config = {"from_attributes": True}  # type: ignore[arg-type]
 
 
 class NoteCreate(BaseModel):
@@ -139,7 +126,7 @@ class NoteUpdate(BaseModel):
 class NoteListResponse(BaseModel):
     """笔记列表响应."""
 
-    notes: list[NoteResponse]
+    notes: list[NoteResponse | NoteResponseWithReactions]
     next_page_token: str | None = None
     total: int = 0
 

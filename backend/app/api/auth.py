@@ -52,14 +52,13 @@ async def setup_admin(
     if count > 0:
         raise HTTPException(status_code=400, detail="系统中已存在用户, 无需再次设置")
 
-    from passlib.context import CryptContext
-    pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    from app.services.auth import pwd_context
 
     username = request.email.split("@")[0]
     user = User(
-        email=request.email or f"{username}@minimail.local",
+        email=request.email,
         username=username,
-        password_hash=pwd.hash(request.password),
+        password_hash=pwd_context.hash(request.password),
         name=request.name or username,
     )
     db.add(user)
@@ -156,13 +155,11 @@ async def change_password(
     db: AsyncSession = Depends(get_db),
 ):
     """修改当前用户密码。需要提供当前密码验证。"""
-    from passlib.context import CryptContext
+    from app.services.auth import pwd_context
 
-    pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-    if not pwd_ctx.verify(body.current_password, current_user.password_hash):
+    if not pwd_context.verify(body.current_password, current_user.password_hash):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="当前密码错误")
 
-    current_user.password_hash = pwd_ctx.hash(body.new_password)
+    current_user.password_hash = pwd_context.hash(body.new_password)
     await db.commit()
     return {"status": "ok", "message": "密码已修改"}

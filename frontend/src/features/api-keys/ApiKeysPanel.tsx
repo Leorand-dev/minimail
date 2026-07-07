@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useMailStore } from '@/stores/mail';
 import { fetchApiTokens, createApiToken, revokeApiToken } from '@/api/api_tokens';
 import type { ApiToken, ApiTokenCreated } from '@/api/api_tokens';
 
 export default function ApiKeysPanel() {
-  const setActiveView = useMailStore((s) => s.setActiveView);
   const [tokens, setTokens] = useState<ApiToken[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

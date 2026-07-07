@@ -214,7 +214,7 @@ async def list_tags(
         ).order_by(NoteTagModel.note_count.desc())
     )
     tags = result.scalars().all()
-    return [NoteTagResponse(name=t.name, note_count=t.note_count) for t in tags]
+    return [NoteTagResponse(id=t.id, name=t.name, note_count=t.note_count, created_at=t.created_at.isoformat() if t.created_at else None) for t in tags]
 
 
 @router.post("/tags", response_model=NoteTagResponse, status_code=201)
@@ -231,12 +231,12 @@ async def create_tag(
     )
     existing = result.scalar_one_or_none()
     if existing:
-        return NoteTagResponse(name=existing.name, note_count=existing.note_count)
+        return NoteTagResponse(id=existing.id, name=existing.name, note_count=existing.note_count, created_at=existing.created_at.isoformat() if existing.created_at else None)
     tag = NoteTagModel(name=body.name.strip(), user_id=user.id, note_count=0)
     db.add(tag)
     await db.flush()
     await db.refresh(tag)
-    return NoteTagResponse(name=tag.name, note_count=tag.note_count)
+    return NoteTagResponse(id=tag.id, name=tag.name, note_count=tag.note_count, created_at=tag.created_at.isoformat() if tag.created_at else None)
 
 
 @router.put("/tags/{tag_name:path}", response_model=NoteTagResponse)
@@ -257,7 +257,7 @@ async def rename_tag(
         raise HTTPException(status_code=404, detail="标签不存在")
     new_name = body.new_name.strip()
     if new_name == tag_name:
-        return NoteTagResponse(name=tag_row.name, note_count=tag_row.note_count)
+        return NoteTagResponse(id=tag_row.id, name=tag_row.name, note_count=tag_row.note_count, created_at=tag_row.created_at.isoformat() if tag_row.created_at else None)
     # 更新所有笔记
     await db.execute(
         sqlalchemy.update(NoteModel)
@@ -275,11 +275,11 @@ async def rename_tag(
         target.note_count += tag_row.note_count
         await db.delete(tag_row)
         await db.flush()
-        return NoteTagResponse(name=target.name, note_count=target.note_count)
+        return NoteTagResponse(id=target.id, name=target.name, note_count=target.note_count, created_at=target.created_at.isoformat() if target.created_at else None)
     tag_row.name = new_name
     await db.flush()
     await db.refresh(tag_row)
-    return NoteTagResponse(name=tag_row.name, note_count=tag_row.note_count)
+    return NoteTagResponse(id=tag_row.id, name=tag_row.name, note_count=tag_row.note_count, created_at=tag_row.created_at.isoformat() if tag_row.created_at else None)
 
 
 @router.delete("/tags/{tag_name:path}", status_code=204)
@@ -503,13 +503,18 @@ async def semantic_search(
     query = query.order_by(sqlalchemy.text("score ASC")).limit(body.top_k)
     result = await db.execute(query)
     rows = result.all()
-    items = [
-        SemanticSearchItem(
-            note=_note_to_response(row.NoteModel),
-            score=float(round((1 - row.score) * 100, 2)),
-        )
-        for row in rows
-    ]
+    items = []
+    for row in rows:
+        note_model = row[0]  # the NoteModel entity
+        score_val = float(round((1 - row[1]) * 100, 2))  # cosine_distance labeled "score"
+        items.append(SemanticSearchItem(
+            id=note_model.id,
+            content=note_model.content,
+            score=score_val,
+            tags=note_model.tags,
+            created_at=note_model.created_at,
+            snippet=note_model.content[:200],
+        ))
     return SemanticSearchResponse(results=items)
 
 
@@ -677,7 +682,7 @@ async def get_link_metadata(
 # ─── 从邮件创建笔记 ───
 
 
-@router.post("/{note_id}/from-email", response_model=NoteResponse, status_code=201)
+@router.post("/from-email", response_model=NoteResponse, status_code=201)
 async def create_note_from_email(
     body: CreateNoteFromEmailRequest,
     user: User = Depends(get_current_user),

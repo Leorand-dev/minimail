@@ -66,6 +66,7 @@ class User(Base):
 
     # ── 关系 ──
     notes = relationship("Note", back_populates="user", cascade="all, delete-orphan")
+    api_tokens = relationship("ApiToken", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<User id={self.id} email={self.email}>"

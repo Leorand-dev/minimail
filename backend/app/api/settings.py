@@ -169,10 +169,16 @@ async def test_mail_connection(
         try:
             import aiosmtplib
             smtp_username = current_user.smtp_username or current_user.email
-            cipher = Fernet(settings.encryption_key.encode())
-            smtp_pwd = cipher.decrypt(
-                base64.urlsafe_b64decode(current_user.smtp_password_enc.encode())
-            ).decode()
+            # Decrypt SMTP password, guarding against empty/missing
+            smtp_pwd = ""
+            if current_user.smtp_password_enc:
+                try:
+                    cipher = Fernet(settings.encryption_key.encode())
+                    smtp_pwd = cipher.decrypt(
+                        base64.urlsafe_b64decode(current_user.smtp_password_enc.encode())
+                    ).decode()
+                except Exception:
+                    smtp_pwd = current_user.smtp_password_enc
             if current_user.smtp_ssl:
                 await aiosmtplib.smtp_connect(
                     hostname=current_user.smtp_host,

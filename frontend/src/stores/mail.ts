@@ -36,7 +36,6 @@ interface MailState {
   searchShowFilters: boolean;
   activePane: Pane;
   activeView: MailView;
-  selectedMessage: MessageDetail | null;
   selectedUid: number | null;
   previewMessage: MessageDetail | null;
   composePrefill: ComposePrefill | null;
@@ -48,7 +47,6 @@ interface MailState {
   setCurrentAccount: (id: string | null) => void;
   setCurrentFolder: (f: string) => void;
   setMessages: (messages: MessageSummary[], total?: number, page?: number, totalPages?: number) => void;
-  setTotalMessages: (n: number) => void;
   setPage: (p: number) => void;
   setLoading: (v: boolean) => void;
   setError: (e: string | null) => void;
@@ -61,7 +59,6 @@ interface MailState {
   setSearchShowFilters: (v: boolean) => void;
   setActivePane: (p: Pane) => void;
   setActiveView: (v: MailView) => void;
-  setSelectedMessage: (m: MessageDetail | null) => void;
   setSelectedUid: (uid: number | null) => void;
   setPreviewMessage: (m: MessageDetail | null) => void;
   setComposePrefill: (p: ComposePrefill | null) => void;
@@ -88,7 +85,6 @@ export const useMailStore = create<MailState>()((set) => {
     searchShowFilters: false,
     activePane: 'list',
     activeView: 'mail',
-    selectedMessage: null,
     selectedUid: null,
     previewMessage: null,
     composePrefill: null,
@@ -115,7 +111,6 @@ export const useMailStore = create<MailState>()((set) => {
     setCurrentAccount: (currentAccount) => set({ currentAccount, page: 1 }),
     setMessages: (messages, total, page, totalPages) =>
       set({ messages, totalMessages: total ?? 0, page: page ?? 1, totalPages: totalPages ?? 1 }),
-    setTotalMessages: (n) => set({ totalMessages: n }),
     setCurrentFolder: (currentFolder) => set({ currentFolder, page: 1 }),
     setPage: (page) => set({ page }),
     setLoading: (loading) => set({ loading }),
@@ -132,8 +127,7 @@ export const useMailStore = create<MailState>()((set) => {
     setSearchUnreadOnly: (searchUnreadOnly) => set({ searchUnreadOnly, page: 1 }),
     setSearchShowFilters: (searchShowFilters) => set({ searchShowFilters }),
     setActivePane: (activePane) => set({ activePane }),
-    setActiveView: (activeView) => set({ activeView, selectedMessage: null, previewMessage: null }),
-    setSelectedMessage: (selectedMessage) => set({ selectedMessage }),
+    setActiveView: (activeView) => set({ activeView, previewMessage: null }),
     setSelectedUid: (selectedUid) => set({ selectedUid }),
     setPreviewMessage: (previewMessage) => set({ previewMessage }),
     setComposePrefill: (composePrefill) => set({ composePrefill }),

@@ -26,13 +26,13 @@ from app.services.contact import (
     batch_delete_contacts,
     create_contact,
     create_group,
-    delete_contact,
-    delete_group,
-    get_contact,
+    delete_contact as svc_delete_contact,
+    delete_group as svc_delete_group,
+    get_contact as svc_get_contact,
     list_contacts,
     list_groups,
     update_contact,
-    update_group,
+    update_group as svc_update_group,
 )
 
 router = APIRouter(prefix="/api/contacts", tags=["contacts"])
@@ -89,7 +89,7 @@ async def update_group(
     db: AsyncSession = Depends(get_db),
 ):
     """更新分组."""
-    group = await update_group(db, group_id, user.id, data)
+    group = await svc_update_group(db, group_id, user.id, data)
     if not group:
         raise HTTPException(404, "分组不存在")
     return ContactGroupResponse(
@@ -109,7 +109,7 @@ async def delete_group(
     db: AsyncSession = Depends(get_db),
 ):
     """删除分组."""
-    ok = await delete_group(db, group_id, user.id)
+    ok = await svc_delete_group(db, group_id, user.id)
     if not ok:
         raise HTTPException(404, "分组不存在")
 
@@ -197,7 +197,7 @@ async def get_contact(
     db: AsyncSession = Depends(get_db),
 ):
     """获取单个联系人."""
-    contact = await get_contact(db, contact_id, user.id)
+    contact = await svc_get_contact(db, contact_id, user.id)
     if not contact:
         raise HTTPException(404, "联系人不存在")
     return ContactResponse(
@@ -292,7 +292,7 @@ async def delete_contact(
     db: AsyncSession = Depends(get_db),
 ):
     """删除联系人."""
-    ok = await delete_contact(db, contact_id, user.id)
+    ok = await svc_delete_contact(db, contact_id, user.id)
     if not ok:
         raise HTTPException(404, "联系人不存在")
 

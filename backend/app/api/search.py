@@ -62,9 +62,9 @@ async def unified_search(
                 type_="note",
                 title=snippet[:80],
                 snippet=snippet,
-                date=note.created_at.isoformat(),
+                created_at=note.created_at.isoformat() if note.created_at else None,
                 tags=note.tags,
-                score=1.0 if query.lower() in note.content.lower() else 0.5,
+                url="",
             )
         )
 

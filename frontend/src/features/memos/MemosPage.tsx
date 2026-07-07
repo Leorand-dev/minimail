@@ -40,7 +40,7 @@ import TagsManager from './TagsManager';
 
 export default function MemosPage() {
   const {
-    notes, tags, activeTag, searchQuery, loading, editingNote,
+    notes, tags, activeTag, searchQuery, editingNote,
     noteView, setNotes, setTags, setActiveTag, setSearchQuery,
     setLoading, setEditingNote, setNoteView,
     updateNoteInList, removeNoteFromList,
@@ -147,11 +147,6 @@ export default function MemosPage() {
   };
 
   // ── 操作 ──
-  const handleCreate = () => {
-    setEditingNote(null);
-    setShowEditor(true);
-  };
-
   const handleEdit = (note: Note) => {
     setEditingNote(note);
     setShowEditor(true);
