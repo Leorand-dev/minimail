@@ -185,3 +185,64 @@ export async function toggleReaction(
   });
   return res.data;
 }
+
+/** 上传笔记附件 */
+export async function uploadAttachment(
+  noteId: string,
+  file: File
+): Promise<NoteAttachment> {
+  const form = new FormData();
+  form.append('file', file);
+  const res = await api.post(`/notes/${noteId}/attachments`, form);
+  return res.data;
+}
+
+/** 获取笔记附件列表 */
+export async function fetchAttachments(
+  noteId: string
+): Promise<NoteAttachment[]> {
+  const res = await api.get(`/notes/${noteId}/attachments`);
+  return res.data;
+}
+
+/** 创建评论 */
+export async function createComment(
+  noteId: string,
+  content: string
+): Promise<Note> {
+  const res = await api.post(`/notes/${noteId}/comments`, { content });
+  return res.data;
+}
+
+/** 获取评论列表 */
+export async function fetchComments(
+  noteId: string
+): Promise<Note[]> {
+  const res = await api.get(`/notes/${noteId}/comments`);
+  return res.data;
+}
+
+/** 获取链接元数据 */
+export async function fetchLinkMetadata(
+  url: string
+): Promise<LinkMetadata> {
+  const res = await api.post('/notes/link-metadata', { url });
+  return res.data;
+}
+
+export interface NoteAttachment {
+  id: string;
+  note_id: string;
+  filename: string;
+  size: number;
+  mime_type: string;
+  created_at?: string;
+  url: string;
+}
+
+export interface LinkMetadata {
+  url: string;
+  title: string;
+  description: string;
+  image: string;
+}

@@ -11,10 +11,17 @@ Minimail — 笔记库 Note API
   - POST   /api/notes/{id}/restore    恢复归档
   - GET    /api/notes/tags            用户标签列表
   - POST   /api/notes/tags            创建标签
-  - PUT    /api/notes/tags/{name}     重命名标签
   - DELETE /api/notes/tags/{name}     删除标签 (从所有笔记中移除)
   - GET    /api/notes/search          全文搜索
   - POST   /api/notes/search/semantic 语义搜索 (外部 AI 传入 embedding)
+  - POST   /api/notes/{note_id}/reactions 切换反应
+  - POST   /api/notes/{note_id}/attachments 上传附件
+  - GET    /api/notes/{note_id}/attachments 附件列表
+  - POST   /api/notes/{note_id}/comments 创建评论
+  - GET    /api/notes/{note_id}/comments 评论列表
+  - POST   /api/notes/link-metadata   获取链接元数据
+  - GET    /api/files/{attachment_id} 文件下载
+  - POST   /api/notes/from-email      从邮件创建笔记
   - POST   /api/notes/from-context    从外部上下文创建笔记 (Agent 专用)
 
 参考: https://github.com/usememos/memos
@@ -24,9 +31,10 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status, UploadFile, File
+from fastapi.responses import FileResponse
+from pathlib import Path as FilePath
 import sqlalchemy
 from sqlalchemy import func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,8 +43,12 @@ from sqlalchemy.future import select
 from app.database import get_db
 from app.models.user import User
 from app.schemas.note import (
+    CommentCreateRequest,
     CreateNoteFromEmailRequest,
     FromContextRequest,
+    LinkMetadataRequest,
+    LinkMetadataResponse,
+    NoteAttachmentResponse,
     NoteCreate,
     NoteListResponse,
     NoteReactionResponse,
@@ -53,7 +65,7 @@ from app.schemas.note import (
 from app.services.auth import get_current_user
 
 # 引入 ORM 模型
-from app.models.note import Note as NoteModel, NoteTag as NoteTagModel, NoteReaction as NoteReactionModel
+from app.models.note import Note as NoteModel, NoteTag as NoteTagModel, NoteReaction as NoteReactionModel, NoteAttachment as NoteAttachmentModel
 
 router = APIRouter(prefix="/api/notes", tags=["notes"])
 
@@ -613,6 +625,143 @@ async def toggle_reaction(
     return _note_with_reactions(note, reactions)
 
 
+# ─── 附件上传 ───
+
+
+@router.post("/{note_id}/attachments", response_model=NoteAttachmentResponse, status_code=201)
+async def upload_attachment(
+    note_id: uuid.UUID = Path(...),
+    file: UploadFile = File(...),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """上传笔记附件."""
+    await _get_note_or_404(note_id, user, db)
+
+    # 保存文件
+    upload_dir = FilePath(__file__).resolve().parent.parent.parent / "uploads" / "notes"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    file_id = uuid.uuid4()
+    ext = FilePath(file.filename or "file").suffix if file.filename else ""
+    save_name = f"{file_id}{ext}"
+    save_path = upload_dir / save_name
+
+    content = await file.read()
+    save_path.write_bytes(content)
+
+    # 写数据库
+    att = NoteAttachmentModel(
+        id=file_id,
+        note_id=note_id,
+        filename=file.filename or "unnamed",
+        filepath=str(save_path),
+        size=len(content),
+        mime_type=file.content_type or "application/octet-stream",
+    )
+    db.add(att)
+    await db.flush()
+    await db.refresh(att)
+
+    return _attachment_to_response(att)
+
+
+@router.get("/{note_id}/attachments", response_model=list[NoteAttachmentResponse])
+async def list_attachments(
+    note_id: uuid.UUID = Path(...),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取笔记附件列表."""
+    await _get_note_or_404(note_id, user, db)
+    result = await db.execute(
+        select(NoteAttachmentModel).where(NoteAttachmentModel.note_id == note_id)
+        .order_by(NoteAttachmentModel.created_at.desc())
+    )
+    return [_attachment_to_response(a) for a in result.scalars().all()]
+
+
+# ─── 评论/线程 ───
+
+
+@router.post("/{note_id}/comments", response_model=NoteResponse, status_code=201)
+async def create_comment(
+    body: CommentCreateRequest,
+    note_id: uuid.UUID = Path(...),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """对笔记添加评论."""
+    parent = await _get_note_or_404(note_id, user, db)
+
+    comment = NoteModel(
+        content=body.content,
+        user_id=user.id,
+        parent_id=note_id,
+        visibility=parent.visibility,
+        tags=[],
+    )
+    db.add(comment)
+    await db.flush()
+    await db.refresh(comment)
+    return NoteResponse.model_validate(comment)
+
+
+@router.get("/{note_id}/comments", response_model=list[NoteResponse])
+async def list_comments(
+    note_id: uuid.UUID = Path(...),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取笔记的评论列表."""
+    await _get_note_or_404(note_id, user, db)
+    result = await db.execute(
+        select(NoteModel).where(
+            NoteModel.parent_id == note_id,
+            NoteModel.row_status == "active",
+        ).order_by(NoteModel.created_at.asc())
+    )
+    return [NoteResponse.model_validate(c) for c in result.scalars().all()]
+
+
+# ─── 链接元数据 ───
+
+
+@router.post("/link-metadata", response_model=LinkMetadataResponse)
+async def get_link_metadata(
+    body: LinkMetadataRequest,
+    user: User = Depends(get_current_user),
+):
+    """获取 URL 的 Open Graph 元数据."""
+    try:
+        import httpx
+        from bs4 import BeautifulSoup
+
+        async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
+            resp = await client.get(body.url, headers={"User-Agent": "Minimail/1.0"})
+            resp.raise_for_status()
+            html = resp.text
+
+        soup = BeautifulSoup(html, "html.parser")
+
+        def _og(key: str) -> str:
+            tag = soup.find("meta", property=f"og:{key}") or soup.find("meta", attrs={"name": f"og:{key}"})
+            return tag.get("content", "") if tag else ""
+
+        title = _og("title") or soup.title.string.strip() if soup.title else ""
+        description = _og("description") or ""
+        image = _og("image") or ""
+
+        return LinkMetadataResponse(
+            url=body.url,
+            title=title[:500],
+            description=description[:1000],
+            image=image[:1000],
+        )
+    except Exception:
+        return LinkMetadataResponse(url=body.url)
+
+
 @router.post("/{note_id}/from-email", response_model=NoteResponse, status_code=201)
 async def create_note_from_email(
     body: CreateNoteFromEmailRequest,
@@ -742,4 +891,17 @@ def _note_with_reactions(
         created_at=base.created_at,
         updated_at=base.updated_at,
         reactions=reactions,
+    )
+
+
+def _attachment_to_response(att: NoteAttachmentModel) -> NoteAttachmentResponse:
+    """ORM attachment → response."""
+    return NoteAttachmentResponse(
+        id=str(att.id),
+        note_id=str(att.note_id),
+        filename=att.filename,
+        size=att.size,
+        mime_type=att.mime_type,
+        created_at=att.created_at.isoformat() if att.created_at else None,
+        url=f"/api/files/{att.id}",
     )

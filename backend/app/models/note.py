@@ -58,6 +58,9 @@ class Note(Base):
 
     # 关系
     user = relationship("User", back_populates="notes")
+    attachments: Mapped[list["NoteAttachment"]] = relationship(
+        back_populates="note", cascade="all, delete-orphan"
+    )
     reactions: Mapped[list["NoteReaction"]] = relationship(
         back_populates="note", cascade="all, delete-orphan"
     )
@@ -75,6 +78,29 @@ class Note(Base):
             postgresql_using="gin",
         ),
     )
+
+
+class NoteAttachment(Base):
+    """笔记附件."""
+
+    __tablename__ = "note_attachments"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    note_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("notes.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    filename: Mapped[str] = mapped_column(String(256), nullable=False)
+    filepath: Mapped[str] = mapped_column(String(512), nullable=False)
+    size: Mapped[int] = mapped_column(Integer, default=0)
+    mime_type: Mapped[str] = mapped_column(String(128), default="application/octet-stream")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # 关系
+    note = relationship("Note", back_populates="attachments")
 
 
 class NoteTag(Base):

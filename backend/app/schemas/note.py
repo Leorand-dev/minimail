@@ -11,6 +11,18 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 
+class NoteAttachmentResponse(BaseModel):
+    """附件响应."""
+
+    id: str
+    note_id: str
+    filename: str
+    size: int
+    mime_type: str
+    created_at: str | None = None
+    url: str = ""
+
+
 class NoteReactionResponse(BaseModel):
     """笔记反应."""
 
@@ -169,3 +181,24 @@ class UnifiedSearchResponse(BaseModel):
     results: list[UnifiedSearchItem]
     total: int
     query: str
+
+
+class LinkMetadataResponse(BaseModel):
+    """链接元数据."""
+
+    url: str
+    title: str = ""
+    description: str = ""
+    image: str = ""
+
+
+class CommentCreateRequest(BaseModel):
+    """创建评论."""
+
+    content: str = Field(..., min_length=1, max_length=65536)
+
+
+class LinkMetadataRequest(BaseModel):
+    """链接元数据请求."""
+
+    url: str = Field(..., max_length=2048)

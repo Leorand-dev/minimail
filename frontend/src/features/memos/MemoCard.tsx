@@ -6,10 +6,11 @@
  */
 
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import type { Note } from '@/api/memos';
-import { toggleReaction } from '@/api/memos';
+import { toggleReaction, fetchAttachments, fetchComments, createComment } from '@/api/memos';
+import type { NoteAttachment } from '@/api/memos';
 
 interface MemoCardProps {
   note: Note;
@@ -34,6 +35,17 @@ function formatTime(iso: string): string {
 
 export default function MemoCard({ note: initialNote, onEdit, onDelete, onTogglePin }: MemoCardProps) {
   const [note, setNote] = useState(initialNote);
+
+  const [attachments, setAttachments] = useState<NoteAttachment[]>([]);
+  const [showComments, setShowComments] = useState(false);
+  const [comments, setComments] = useState<Note[]>([]);
+  const [commentInput, setCommentInput] = useState('');
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    fetchAttachments(note.id).then(setAttachments).catch(() => {});
+    fetchComments(note.id).then(setComments).catch(() => {});
+  }, [note.id]);
 
   const handleReaction = async (emoji: string) => {
     try {
@@ -136,6 +148,101 @@ export default function MemoCard({ note: initialNote, onEdit, onDelete, onToggle
           ))}
         </div>
       )}
+
+      {/* 附件 */}
+      {attachments.length > 0 && (
+        <div className="mt-3 border-t border-gray-100 pt-3">
+          <div className="text-xs text-gray-400 mb-2">📎 附件</div>
+          <div className="flex flex-wrap gap-2">
+            {attachments.map((att) => (
+              <a
+                key={att.id}
+                href={att.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 hover:bg-gray-100 text-xs text-gray-600 hover:text-[#066da5] transition-colors border border-gray-200"
+              >
+                <span className="truncate max-w-[200px]">{att.filename}</span>
+                <span className="text-gray-400">
+                  ({(att.size / 1024).toFixed(1)} KB)
+                </span>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 评论 */}
+      <div className="mt-3 border-t border-gray-100 pt-3">
+        <button
+          onClick={() => {
+            setShowComments((prev) => !prev);
+            if (!showComments && comments.length === 0) {
+              fetchComments(note.id).then(setComments).catch(() => {});
+            }
+          }}
+          className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-[#066da5] transition-colors"
+        >
+          <span>💬</span>
+          <span>{comments.length} 条评论</span>
+          <span
+            className={`ml-1 transition-transform ${
+              showComments ? 'rotate-180' : ''
+            }`}
+          >
+            ▾
+          </span>
+        </button>
+
+        {showComments && (
+          <div className="mt-3 space-y-3">
+            {comments.length === 0 && (
+              <p className="text-xs text-gray-400">暂无评论</p>
+            )}
+            {comments.map((c) => (
+              <div key={c.id} className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
+                <div className="prose prose-sm max-w-none prose-p:m-0">
+                  <ReactMarkdown>{c.content}</ReactMarkdown>
+                </div>
+                {c.created_at && (
+                  <div className="mt-1 text-[10px] text-gray-400">
+                    {formatTime(c.created_at)}
+                  </div>
+                )}
+              </div>
+            ))}
+            <div className="flex gap-2">
+              <textarea
+                value={commentInput}
+                onChange={(e) => setCommentInput(e.target.value)}
+                placeholder="写下你的评论..."
+                className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-[#066da5] resize-none"
+                rows={2}
+              />
+              <button
+                onClick={async () => {
+                  if (!commentInput.trim() || sending) return;
+                  setSending(true);
+                  try {
+                    await createComment(note.id, commentInput.trim());
+                    setCommentInput('');
+                    const updated = await fetchComments(note.id);
+                    setComments(updated);
+                  } catch {
+                    // silently fail
+                  } finally {
+                    setSending(false);
+                  }
+                }}
+                disabled={!commentInput.trim() || sending}
+                className="px-3 py-1.5 text-sm bg-[#066da5] text-white rounded-md hover:bg-[#05588a] disabled:opacity-50 transition-colors self-end"
+              >
+                {sending ? '发送中...' : '发送'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* 编辑/删除时间 */}
       {note.updated_at && note.created_at && note.updated_at !== note.created_at && (

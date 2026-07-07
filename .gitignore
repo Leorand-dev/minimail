@@ -41,3 +41,4 @@ logs/
 # SQLite (dev)
 *.db
 *.sqlite3
+_devdocs/
