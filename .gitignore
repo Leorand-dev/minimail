@@ -42,3 +42,4 @@ logs/
 *.db
 *.sqlite3
 _devdocs/
+backend/uploads/
