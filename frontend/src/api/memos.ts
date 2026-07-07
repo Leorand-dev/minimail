@@ -246,3 +246,108 @@ export interface LinkMetadata {
   description: string;
   image: string;
 }
+
+export interface NoteShare {
+  id: string;
+  note_id: string;
+  token: string;
+  expires_at?: string;
+  created_at?: string;
+  url: string;
+}
+
+export interface NoteShortcut {
+  id: string;
+  name: string;
+  icon: string;
+  filter_tag: string;
+  filter_visibility: string;
+  sort_order?: number;
+}
+
+export interface NoteWebhook {
+  id: string;
+  url: string;
+  events: string[];
+  enabled: boolean;
+  created_at?: string;
+}
+
+export interface NoteSettings {
+  note_allow_shares: boolean;
+}
+
+/** 创建分享链接 */
+export async function createShareLink(noteId: string, expiresInHours?: number): Promise<NoteShare> {
+  const res = await api.post(`/notes/${noteId}/shares`, { expires_in_hours: expiresInHours || 0 });
+  return res.data;
+}
+
+/** 获取笔记分享链接列表 */
+export async function fetchShares(noteId: string): Promise<NoteShare[]> {
+  const res = await api.get(`/notes/${noteId}/shares`);
+  return res.data;
+}
+
+/** 删除分享链接 */
+export async function deleteShareLink(noteId: string, shareId: string): Promise<void> {
+  await api.delete(`/notes/${noteId}/shares/${shareId}`);
+}
+
+/** 获取快捷键列表 */
+export async function fetchShortcuts(): Promise<NoteShortcut[]> {
+  const res = await api.get('/notes/shortcuts');
+  return res.data;
+}
+
+/** 创建快捷键 */
+export async function createShortcut(params: { name: string; icon?: string; filter_tag?: string; filter_visibility?: string }): Promise<NoteShortcut> {
+  const res = await api.post('/notes/shortcuts', params);
+  return res.data;
+}
+
+/** 更新快捷键 */
+export async function updateShortcut(id: string, params: Partial<NoteShortcut>): Promise<NoteShortcut> {
+  const res = await api.put(`/notes/shortcuts/${id}`, params);
+  return res.data;
+}
+
+/** 删除快捷键 */
+export async function deleteShortcut(id: string): Promise<void> {
+  await api.delete(`/notes/shortcuts/${id}`);
+}
+
+/** 获取 Webhook 列表 */
+export async function fetchWebhooks(): Promise<NoteWebhook[]> {
+  const res = await api.get('/notes/webhooks');
+  return res.data;
+}
+
+/** 创建 Webhook */
+export async function createWebhook(params: { url: string; events?: string[]; secret?: string }): Promise<NoteWebhook> {
+  const res = await api.post('/notes/webhooks', params);
+  return res.data;
+}
+
+/** 更新 Webhook */
+export async function updateWebhook(id: string, params: Partial<NoteWebhook>): Promise<NoteWebhook> {
+  const res = await api.put(`/notes/webhooks/${id}`, params);
+  return res.data;
+}
+
+/** 删除 Webhook */
+export async function deleteWebhook(id: string): Promise<void> {
+  await api.delete(`/notes/webhooks/${id}`);
+}
+
+/** 获取笔记设置 */
+export async function fetchNoteSettings(): Promise<NoteSettings> {
+  const res = await api.get('/settings/notes');
+  return res.data;
+}
+
+/** 更新笔记设置 */
+export async function updateNoteSettings(params: Partial<NoteSettings>): Promise<NoteSettings> {
+  const res = await api.put('/settings/notes', params);
+  return res.data;
+}

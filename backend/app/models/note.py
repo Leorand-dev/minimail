@@ -103,6 +103,74 @@ class NoteAttachment(Base):
     note = relationship("Note", back_populates="attachments")
 
 
+class NoteShare(Base):
+    """公开分享链接."""
+
+    __tablename__ = "note_shares"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    note_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("notes.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    token: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    note = relationship("Note")
+
+
+class NoteShortcut(Base):
+    """保存的过滤快捷入口."""
+
+    __tablename__ = "note_shortcuts"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    name: Mapped[str] = mapped_column(String(64), nullable=False)
+    icon: Mapped[str] = mapped_column(String(8), default="🔖")
+    filter_tag: Mapped[str] = mapped_column(String(64), default="")
+    filter_visibility: Mapped[str] = mapped_column(String(16), default="")
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class Webhook(Base):
+    """Webhook 配置."""
+
+    __tablename__ = "note_webhooks"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    url: Mapped[str] = mapped_column(String(1024), nullable=False)
+    events: Mapped[list[str]] = mapped_column(
+        ARRAY(String(32)), nullable=False, default=lambda: ["note.created"]
+    )
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    secret: Mapped[str] = mapped_column(String(128), default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
 class NoteTag(Base):
     """标签聚合表 (可选辅助, 用于快速列出用户所有标签)."""
 

@@ -23,8 +23,16 @@ import {
   togglePin as apiTogglePin,
   fetchTags,
   searchNotes as apiSearchNotes,
+  fetchNoteSettings,
+  updateNoteSettings,
+  fetchWebhooks,
+  createWebhook,
+  deleteWebhook,
+  fetchShortcuts,
+  createShortcut,
+  deleteShortcut,
 } from '@/api/memos';
-import type { Note } from '@/api/memos';
+import type { Note, NoteSettings, NoteWebhook, NoteShortcut } from '@/api/memos';
 import { useNotesStore } from '@/stores/memos';
 import MemoList from './MemoList';
 import MemoEditor from './MemoEditor';
@@ -39,6 +47,12 @@ export default function MemosPage() {
   } = useNotesStore();
 
   const [showEditor, setShowEditor] = useState(false);
+  const [noteSettings, setNoteSettings] = useState<NoteSettings>({ note_allow_shares: true });
+  const [webhooks, setWebhooks] = useState<NoteWebhook[]>([]);
+  const [shortcuts, setShortcuts] = useState<NoteShortcut[]>([]);
+  const [webhookUrl, setWebhookUrl] = useState('');
+  const [shortcutName, setShortcutName] = useState('');
+  const [shortcutTag, setShortcutTag] = useState('');
 
   // ── 加载笔记列表 ──
   const loadNotes = useCallback(async () => {
@@ -72,6 +86,65 @@ export default function MemosPage() {
     loadNotes();
     loadTags();
   }, [loadNotes, loadTags]);
+
+  // ── 加载笔记设置 ──
+  const loadNoteSettings = useCallback(async () => {
+    try {
+      const res = await fetchNoteSettings();
+      setNoteSettings(res);
+    } catch {}
+  }, []);
+
+  // ── 加载 Webhook ──
+  const loadWebhooks = useCallback(async () => {
+    try {
+      const res = await fetchWebhooks();
+      setWebhooks(res);
+    } catch {}
+  }, []);
+
+  // ── 加载快捷键 ──
+  const loadShortcuts = useCallback(async () => {
+    try {
+      const res = await fetchShortcuts();
+      setShortcuts(res);
+    } catch {}
+  }, []);
+
+  // Load settings data when settings view is shown
+  useEffect(() => {
+    if (noteView === 'settings') {
+      loadNoteSettings();
+      loadWebhooks();
+      loadShortcuts();
+    }
+  }, [noteView, loadNoteSettings, loadWebhooks, loadShortcuts]);
+
+  const toggleAllowShares = async () => {
+    try {
+      const updated = await updateNoteSettings({ note_allow_shares: !noteSettings.note_allow_shares });
+      setNoteSettings(updated);
+    } catch {}
+  };
+
+  const handleAddWebhook = async () => {
+    if (!webhookUrl.trim()) return;
+    try {
+      await createWebhook({ url: webhookUrl.trim() });
+      setWebhookUrl('');
+      await loadWebhooks();
+    } catch {}
+  };
+
+  const handleAddShortcut = async () => {
+    if (!shortcutName.trim()) return;
+    try {
+      await createShortcut({ name: shortcutName.trim(), filter_tag: shortcutTag });
+      setShortcutName('');
+      setShortcutTag('');
+      await loadShortcuts();
+    } catch {}
+  };
 
   // ── 操作 ──
   const handleCreate = () => {
@@ -229,6 +302,61 @@ export default function MemosPage() {
         <div className="flex-1 overflow-y-auto">
           {noteView === 'tags' ? (
             <TagsManager tags={tags} onRefresh={() => { loadNotes(); loadTags(); }} />
+          ) : noteView === 'settings' ? (
+            <div className="p-6 max-w-2xl">
+              <h3 className="text-lg font-semibold mb-4">⚙️ 笔记库设置</h3>
+
+              {/* 分享开关 */}
+              <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
+                <h4 className="font-medium text-sm mb-3">公开分享</h4>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm text-gray-700">允许创建公开分享链接</div>
+                    <div className="text-xs text-gray-400 mt-0.5">开启后可通过链接分享笔记给未登录用户</div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" checked={noteSettings.note_allow_shares} onChange={toggleAllowShares} />
+                    <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#066da5]"></div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Webhook 配置 */}
+              <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
+                <h4 className="font-medium text-sm mb-3">🔗 Webhook</h4>
+                <div className="text-xs text-gray-400 mb-3">笔记创建/更新时发送 HTTP 通知</div>
+                <div className="space-y-2">
+                  {webhooks.map(w => (
+                    <div key={w.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                      <span className="text-sm truncate flex-1">{w.url}</span>
+                      <button onClick={() => deleteWebhook(w.id).then(loadWebhooks)} className="text-xs text-red-500 hover:text-red-700 ml-2">删除</button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2 mt-2">
+                  <input type="url" value={webhookUrl} onChange={e => setWebhookUrl(e.target.value)} placeholder="https://example.com/webhook" className="flex-1 px-2 py-1 text-sm border border-gray-200 rounded" />
+                  <button onClick={handleAddWebhook} className="px-3 py-1 text-sm bg-[#066da5] text-white rounded hover:bg-[#05588a]">添加</button>
+                </div>
+              </div>
+
+              {/* 快捷键 */}
+              <div className="bg-white rounded-lg border border-gray-200 p-4">
+                <h4 className="font-medium text-sm mb-3">🔖 快捷键</h4>
+                <div className="text-xs text-gray-400 mb-3">保存的过滤条件快捷入口</div>
+                <div className="space-y-2">
+                  {shortcuts.map(s => (
+                    <div key={s.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                      <span className="text-sm">{s.icon} {s.name}</span>
+                      <button onClick={() => deleteShortcut(s.id).then(loadShortcuts)} className="text-xs text-red-500 hover:text-red-700">删除</button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2 mt-2">
+                  <input type="text" value={shortcutName} onChange={e => setShortcutName(e.target.value)} placeholder="名称" className="flex-1 px-2 py-1 text-sm border border-gray-200 rounded" />
+                  <button onClick={handleAddShortcut} className="px-3 py-1 text-sm bg-[#066da5] text-white rounded hover:bg-[#05588a]">添加</button>
+                </div>
+              </div>
+            </div>
           ) : showEditor ? (
             <div className="p-4 max-w-3xl">
               <MemoEditor

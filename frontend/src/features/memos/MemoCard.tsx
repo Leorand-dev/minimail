@@ -9,7 +9,7 @@
 import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import type { Note } from '@/api/memos';
-import { toggleReaction, fetchAttachments, fetchComments, createComment } from '@/api/memos';
+import { toggleReaction, fetchAttachments, fetchComments, createComment, createShareLink } from '@/api/memos';
 import type { NoteAttachment } from '@/api/memos';
 
 interface MemoCardProps {
@@ -41,6 +41,7 @@ export default function MemoCard({ note: initialNote, onEdit, onDelete, onToggle
   const [comments, setComments] = useState<Note[]>([]);
   const [commentInput, setCommentInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAttachments(note.id).then(setAttachments).catch(() => {});
@@ -51,6 +52,17 @@ export default function MemoCard({ note: initialNote, onEdit, onDelete, onToggle
     try {
       const updated = await toggleReaction(note.id, emoji);
       setNote(updated);
+    } catch {
+      // silently fail
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      const share = await createShareLink(note.id);
+      await navigator.clipboard.writeText(share.url);
+      setCopied(share.url);
+      setTimeout(() => setCopied(null), 2000);
     } catch {
       // silently fail
     }
@@ -75,6 +87,18 @@ export default function MemoCard({ note: initialNote, onEdit, onDelete, onToggle
             title={note.pinned ? '取消置顶' : '置顶'}
           >
             📌
+          </button>
+          <button
+            onClick={handleShare}
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-xs text-gray-400 hover:text-[#066da5] transition-colors relative"
+            title={copied ? '已复制到剪贴板' : '创建分享链接'}
+          >
+            🔗
+            {copied && (
+              <span className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-[10px] rounded whitespace-nowrap shadow-lg z-10">
+                已复制
+              </span>
+            )}
           </button>
           <button
             onClick={() => onEdit(note)}

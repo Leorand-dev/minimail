@@ -7,6 +7,8 @@ import { fetchImapStatus, fetchAccountFolders, folderDisplayName } from '@/api/m
 import type { ImapStatus, AccountFolderGroup } from '@/api/mail';
 import api from '@/api/client';
 import { useNotesStore, type NoteView } from '@/stores/memos';
+import { fetchShortcuts } from '@/api/memos';
+import type { NoteShortcut } from '@/api/memos';
 
 interface FolderSidebarProps {
   className?: string;
@@ -69,6 +71,7 @@ export default function FolderSidebar({ className = '', onSelectFolder }: Folder
 
   const [imapStatus, setImapStatus] = useState<ImapStatus | null>(null);
   const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
+  const [shortcuts, setShortcuts] = useState<NoteShortcut[]>([]);
 
   // Load account-folders on mount
   useEffect(() => {
@@ -123,6 +126,7 @@ export default function FolderSidebar({ className = '', onSelectFolder }: Folder
     loadAccounts();
 
     fetchImapStatus().then(setImapStatus).catch(() => {});
+    fetchShortcuts().then(setShortcuts).catch(() => {});
   }, [setAccountFolders]);
 
   const handleSelectFolder = (accountId: string, folderName: string) => {
@@ -185,6 +189,7 @@ export default function FolderSidebar({ className = '', onSelectFolder }: Folder
         activeView={activeView}
         noteView={useNotesStore((s) => s.noteView)}
         sidebarExpanded={useNotesStore((s) => s.sidebarExpanded)}
+        shortcuts={shortcuts}
         onToggle={() => {
           const s = useNotesStore.getState();
           s.setSidebarExpanded(!s.sidebarExpanded);
@@ -297,12 +302,14 @@ function NotesSection({
   activeView,
   noteView,
   sidebarExpanded,
+  shortcuts,
   onToggle,
   onSelectView,
 }: {
   activeView: string;
   noteView: NoteView;
   sidebarExpanded: boolean;
+  shortcuts: NoteShortcut[];
   onToggle: () => void;
   onSelectView: (view: NoteView) => void;
 }) {
@@ -311,6 +318,8 @@ function NotesSection({
     { view: 'tags',     icon: '🏷️', label: '标签管理' },
     { view: 'settings',  icon: '⚙️', label: '设置' },
   ];
+  const setActiveTag = useNotesStore((s) => s.setActiveTag);
+  const setNoteView = useNotesStore((s) => s.setNoteView);
 
   return (
     <div className="px-2 py-1">
@@ -337,6 +346,20 @@ function NotesSection({
               onClick={() => onSelectView(item.view)}
             />
           ))}
+          {shortcuts.length > 0 && (
+            <div className="mt-1 pt-1 border-t border-gray-100">
+              <div className="text-[10px] text-gray-400 uppercase px-2 py-1">快捷键</div>
+              {shortcuts.map(s => (
+                <button key={s.id} onClick={() => {
+                  setActiveTag(s.filter_tag);
+                  setNoteView('list');
+                }} className="w-full flex items-center gap-2 px-2 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded-md">
+                  <span>{s.icon}</span>
+                  <span>{s.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

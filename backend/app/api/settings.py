@@ -16,6 +16,7 @@ from app.config import settings
 from app.database import get_db
 from app.services.auth import get_current_user
 from app.models.user import User
+from app.schemas.note import NoteSettingsResponse
 
 logger = logging.getLogger("webmail.settings")
 
@@ -180,3 +181,26 @@ async def test_mail_connection(
     if errors:
         return {"status": "error", "errors": errors}
     return {"status": "ok", "message": "IMAP 和 SMTP 连接均正常"}
+
+
+# ─── 笔记设置 ───
+
+
+@router.get("/notes", response_model=NoteSettingsResponse)
+async def get_note_settings(
+    current_user: User = Depends(get_current_user),
+):
+    """获取笔记设置."""
+    return NoteSettingsResponse(allow_shares=current_user.note_allow_shares)
+
+
+@router.put("/notes", response_model=NoteSettingsResponse)
+async def update_note_settings(
+    body: NoteSettingsResponse,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """更新笔记设置."""
+    current_user.note_allow_shares = body.allow_shares
+    await db.flush()
+    return NoteSettingsResponse(allow_shares=current_user.note_allow_shares)

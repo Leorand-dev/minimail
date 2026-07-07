@@ -9,6 +9,7 @@ from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import Boolean, DateTime, Integer, String, Text, func
+import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -49,6 +50,7 @@ class User(Base):
     theme: Mapped[str] = mapped_column(String(20), default="light")
     messages_per_page: Mapped[int] = mapped_column(Integer, default=50)
     preview_pane: Mapped[bool] = mapped_column(Boolean, default=True)
+    note_allow_shares: Mapped[bool] = mapped_column(Boolean, default=True, server_default=sa.text("true"))
 
     # ── 配额 ──
     quota_mb: Mapped[int] = mapped_column(Integer, default=0)  # 0 = unlimited

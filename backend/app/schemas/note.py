@@ -252,3 +252,118 @@ class LinkMetadataRequest(BaseModel):
     """链接元数据请求."""
 
     url: str = Field(..., max_length=2048)
+
+
+# ─── 分享链接 ───
+
+
+class NoteShareCreate(BaseModel):
+    """创建分享链接."""
+
+    expires_at: datetime | None = None
+
+
+class NoteShareResponse(BaseModel):
+    """分享链接响应."""
+
+    id: uuid.UUID
+    note_id: uuid.UUID
+    token: str
+    expires_at: datetime | None = None
+    created_at: datetime | None = None
+    url: str = ""
+
+    model_config = {"from_attributes": True}
+
+
+# ─── 快捷入口 ───
+
+
+class NoteShortcutCreate(BaseModel):
+    """创建快捷入口."""
+
+    name: str = Field(..., min_length=1, max_length=64)
+    icon: str = "🔖"
+    filter_tag: str = ""
+    filter_visibility: str = ""
+    sort_order: int = 0
+
+
+class NoteShortcutUpdate(BaseModel):
+    """更新快捷入口."""
+
+    name: str | None = None
+    icon: str | None = None
+    filter_tag: str | None = None
+    filter_visibility: str | None = None
+    sort_order: int | None = None
+
+
+class NoteShortcutResponse(BaseModel):
+    """快捷入口响应."""
+
+    id: uuid.UUID
+    user_id: uuid.UUID
+    name: str
+    icon: str
+    filter_tag: str
+    filter_visibility: str
+    sort_order: int
+    created_at: datetime | None = None
+
+    model_config = {"from_attributes": True}
+
+
+# ─── Webhook ───
+
+
+class WebhookCreate(BaseModel):
+    """创建 Webhook."""
+
+    url: str = Field(..., max_length=1024)
+    events: list[str] = ["note.created"]
+    secret: str = ""
+
+
+class WebhookUpdate(BaseModel):
+    """更新 Webhook."""
+
+    url: str | None = None
+    events: list[str] | None = None
+    enabled: bool | None = None
+    secret: str | None = None
+
+
+class WebhookResponse(BaseModel):
+    """Webhook 响应."""
+
+    id: uuid.UUID
+    user_id: uuid.UUID
+    url: str
+    events: list[str]
+    enabled: bool
+    secret: str
+    created_at: datetime | None = None
+
+    model_config = {"from_attributes": True}
+
+
+# ─── SSE 事件 ───
+
+
+class NoteEvent(BaseModel):
+    """笔记事件 (SSE / Webhook 负载)."""
+
+    event: str
+    note_id: str
+    user_id: str
+    data: dict = {}
+
+
+# ─── 笔记设置 ───
+
+
+class NoteSettingsResponse(BaseModel):
+    """笔记设置响应."""
+
+    allow_shares: bool = True
