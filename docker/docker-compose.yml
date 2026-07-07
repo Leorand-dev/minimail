@@ -1,12 +1,12 @@
 services:
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: webmail-db
+    container_name: minimail-db
     restart: unless-stopped
     environment:
       POSTGRES_DB: webmail
       POSTGRES_USER: webmail
-      POSTGRES_PASSWORD: webmail_dev
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-webmail_dev}
     ports:
       - "5432:5432"
     volumes:
@@ -20,7 +20,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: webmail-redis
+    container_name: minimail-redis
     restart: unless-stopped
     ports:
       - "6379:6379"
@@ -36,14 +36,15 @@ services:
     build:
       context: ../backend
       dockerfile: Dockerfile
-    container_name: webmail-backend
+    container_name: minimail-backend
     restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql+asyncpg://webmail:webmail_dev@postgres:5432/webmail
+      DATABASE_URL: postgresql+asyncpg://webmail:${DB_PASSWORD:-webmail_dev}@postgres:5432/webmail
       REDIS_URL: redis://redis:6379/0
-      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required (32 chars)}
       CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:5173","http://localhost:3000"]}
       DEBUG: "false"
     depends_on:
@@ -51,15 +52,17 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    command: >
+      sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
 
   frontend:
     build:
       context: ../frontend
       dockerfile: Dockerfile
-    container_name: webmail-frontend
+    container_name: minimail-frontend
     restart: unless-stopped
     ports:
-      - "3000:80"
+      - "80:80"
     depends_on:
       - backend
 

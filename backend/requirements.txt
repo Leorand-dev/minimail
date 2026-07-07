@@ -23,3 +23,12 @@ pytest>=8.0
 pytest-asyncio>=0.25
 httpx>=0.28        # for TestClient
 fakeredis[lua]>=2.26
+
+# SSE 实时事件推送
+sse-starlette>=3.0
+
+# 链接元数据抓取 (OG 标签解析)
+beautifulsoup4>=4.12
+
+# DNS MX 记录查询 (邮箱自动检测)
+dnspython>=2.6
