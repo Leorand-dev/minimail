@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useState, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
 import api from '@/api/client';
 
 interface DocEntry {
@@ -51,24 +52,6 @@ const DOC_NAV: DocEntry[] = [
   },
 ];
 
-interface FlatEntry {
-  path: string;
-  label: string;
-}
-
-function flattenNav(entries: DocEntry[], prefix = ''): FlatEntry[] {
-  const result: FlatEntry[] = [];
-  for (const e of entries) {
-    if (e.children) {
-      if (e.path) result.push({ path: e.path, label: `${e.icon || ''} ${e.title}` });
-      result.push(...flattenNav(e.children, prefix));
-    } else {
-      result.push({ path: e.path, label: `${e.icon || ''} ${e.title}` });
-    }
-  }
-  return result;
-}
-
 export default function DocsPage() {
   const [content, setContent] = useState('');
   const [currentPath, setCurrentPath] = useState('system/index.md');
@@ -76,7 +59,6 @@ export default function DocsPage() {
   const contentRef = useRef<HTMLDivElement>(null);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['系统文档']));
 
-  const navItems = flattenNav(DOC_NAV);
 
   useEffect(() => {
     setLoading(true);
@@ -143,9 +125,10 @@ export default function DocsPage() {
           ) : (
             <div
               ref={contentRef}
-              className="overflow-y-auto"
-              dangerouslySetInnerHTML={{ __html: content }}
-            />
+              className="overflow-y-auto prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-a:text-[#066da5] prose-code:text-pink-600 prose-pre:bg-gray-50 prose-pre:border prose-pre:border-gray-200"
+            >
+              <ReactMarkdown>{content}</ReactMarkdown>
+            </div>
           )}
         </div>
       </div>

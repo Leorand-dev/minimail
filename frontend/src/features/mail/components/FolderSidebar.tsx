@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMailStore } from '@/stores/mail';
 import { useAuthStore } from '@/stores/auth';
@@ -151,7 +151,7 @@ export default function FolderSidebar({ className = '', onSelectFolder }: Folder
   };
 
   // Build flat folder list for current selection (for compatibility)
-  const flatFolders = accountFolders.flatMap((g) => g.folders);
+  const flatFolders = useMemo(() => accountFolders.flatMap((g) => g.folders), [accountFolders]);
   useEffect(() => {
     if (useMailStore.getState().folders.length === 0 && flatFolders.length > 0) {
       useMailStore.getState().setFolders(flatFolders);

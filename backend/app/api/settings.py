@@ -8,7 +8,7 @@ import base64
 import logging
 
 from cryptography.fernet import Fernet
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -129,16 +129,34 @@ async def update_mail_settings(
 @router.post("/mail/test", status_code=status.HTTP_200_OK)
 async def test_mail_connection(
     current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """测试 IMAP/SMTP 配置是否有效 (仅测试连接)."""
-    from app.imap import list_folders  # lazy import
+    from app.imap.connection import get_connection
+    from app.services.email_account import _decrypt_password
 
     errors = []
 
     # Test IMAP
     if current_user.imap_host:
         try:
-            folders = await list_folders(current_user)
+            password = current_user.imap_password_enc or ""
+            if password:
+                try:
+                    password = _decrypt_password(password)
+                except Exception:
+                    pass
+            imap = await get_connection(
+                current_user.id,
+                current_user.imap_host,
+                current_user.imap_port or 993,
+                current_user.imap_ssl if current_user.imap_ssl is not None else True,
+                current_user.imap_username or current_user.email,
+                password,
+            )
+            import asyncio
+            from app.imap import list_folders as imap_list_folders
+            folders = await asyncio.wait_for(imap_list_folders(imap), timeout=10)
             if not folders:
                 errors.append("IMAP 连接成功但无文件夹")
         except Exception as e:

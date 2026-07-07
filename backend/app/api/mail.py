@@ -7,13 +7,13 @@ from __future__ import annotations
 import asyncio
 import re
 import uuid
-from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.config import settings
 from app.imap import (
     list_folders as imap_list_folders,
     fetch_messages as imap_fetch_messages,
@@ -82,19 +82,37 @@ async def _get_user_imap_config(
     # 回退到旧配置 (User 表字段)
     if not user.imap_host:
         domain = user.email.split("@")[-1]
+        password = user.imap_password_enc or ""
+        if password:
+            try:
+                from cryptography.fernet import Fernet
+                import base64
+                cipher = Fernet(settings.encryption_key.encode())
+                password = cipher.decrypt(base64.urlsafe_b64decode(password.encode())).decode()
+            except Exception:
+                pass  # fallback to raw encrypted value
         return {
             "host": f"imap.{domain}",
             "port": user.imap_port,
             "ssl": user.imap_ssl,
             "username": user.imap_username or user.email,
-            "password": user.imap_password_enc or "",
+            "password": password,
         }
+    password = user.imap_password_enc or ""
+    if password:
+        try:
+            from cryptography.fernet import Fernet
+            import base64
+            cipher = Fernet(settings.encryption_key.encode())
+            password = cipher.decrypt(base64.urlsafe_b64decode(password.encode())).decode()
+        except Exception:
+            pass
     return {
         "host": user.imap_host,
         "port": user.imap_port,
         "ssl": user.imap_ssl,
         "username": user.imap_username or user.email,
-        "password": user.imap_password_enc or "",
+        "password": password,
     }
 
 
@@ -282,7 +300,6 @@ async def get_conversations(
         from app.imap.demo_data import get_demo_messages
         msgs = get_demo_messages(user.id)
         messages = [m for m in msgs if m.subject]
-        total = len(messages)
 
     # Group by normalized subject
     groups: dict[str, dict] = {}

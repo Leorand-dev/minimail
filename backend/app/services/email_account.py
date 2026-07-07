@@ -7,11 +7,9 @@ Minimail — 邮箱账户服务
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
-from typing import Optional
 
 from cryptography.fernet import Fernet
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.email_account import EmailAccount
@@ -87,7 +85,7 @@ async def create_account(
     if is_default:
         await db.execute(
             update(EmailAccount)
-            .where(EmailAccount.user_id == user_id, EmailAccount.is_default == True)
+            .where(EmailAccount.user_id == user_id, EmailAccount.is_default)
             .values(is_default=False)
         )
 
@@ -139,7 +137,7 @@ async def update_account(
     if kwargs.get("is_default"):
         await db.execute(
             update(EmailAccount)
-            .where(EmailAccount.user_id == user_id, EmailAccount.is_default == True)
+            .where(EmailAccount.user_id == user_id, EmailAccount.is_default)
             .values(is_default=False)
         )
 
@@ -177,7 +175,7 @@ async def get_default_account(
     """获取用户的默认邮箱账户."""
     result = await db.execute(
         select(EmailAccount).where(
-            EmailAccount.user_id == user_id, EmailAccount.is_default == True
+            EmailAccount.user_id == user_id, EmailAccount.is_default
         )
     )
     return result.scalar_one_or_none()

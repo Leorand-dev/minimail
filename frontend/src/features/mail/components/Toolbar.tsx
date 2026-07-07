@@ -2,7 +2,6 @@ import { useState, useRef } from 'react';
 import { useMailStore } from '@/stores/mail';
 import UserMenu from '@/features/user/UserMenu';
 import SearchPanel from '@/features/search/SearchPanel';
-import type { UnifiedSearchItem } from '@/api/search';
 
 export default function Toolbar() {
   const setActiveView = useMailStore((s) => s.setActiveView);

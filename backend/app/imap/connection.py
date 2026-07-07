@@ -10,11 +10,9 @@ import asyncio
 import logging
 import uuid
 from contextlib import asynccontextmanager
-from typing import Optional
 
 import aioimaplib
 
-from app.config import settings
 
 logger = logging.getLogger("minimail.imap")
 
@@ -102,7 +100,7 @@ async def close_connection(user_id: uuid.UUID) -> None:
             except Exception:
                 pass
         _connection_info[user_id] = {"connected": False, "last_sync": _connection_info.get(user_id, {}).get("last_sync")}
-        logger.info("IMAP 连接 %s 已关闭")
+        logger.info("IMAP 连接 %s 已关闭", user_id)
 
 
 async def close_all() -> None:
