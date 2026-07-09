@@ -10,6 +10,7 @@ interface RichTextEditorProps {
   value: string;
   onChange: (html: string, text: string) => void;
   placeholder?: string;
+  editorRef?: React.MutableRefObject<Editor | null>;
 }
 
 function ToolbarButton({
@@ -174,7 +175,7 @@ function Toolbar({ editor }: { editor: Editor }) {
   );
 }
 
-export default function RichTextEditor({ value, onChange, placeholder }: RichTextEditorProps) {
+export default function RichTextEditor({ value, onChange, placeholder, editorRef }: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -189,6 +190,13 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
       onChange(html, text);
     },
   });
+
+  // Expose editor instance via ref
+  React.useEffect(() => {
+    if (editorRef && editor) {
+      editorRef.current = editor;
+    }
+  }, [editor, editorRef]);
 
   return (
     <div className="flex flex-1 flex-col min-h-[300px] border border-gray-200 rounded-md overflow-hidden">

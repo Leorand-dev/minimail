@@ -7,6 +7,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Path
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -41,6 +42,7 @@ def _to_response(acc: EmailAccount) -> AccountResponse:
         smtp_ssl=acc.smtp_ssl,
         smtp_username=acc.smtp_username,
         smtp_password_masked=bool(acc.smtp_password_enc),
+        signature=acc.signature,
         is_default=acc.is_default,
         created_at=acc.created_at,
         configured=bool(acc.imap_host and acc.imap_password_enc),
@@ -133,3 +135,48 @@ async def set_default_account(
     acc = await update_account(db, account_id, user.id, is_default=True)
     await db.commit()
     return _to_response(acc)
+
+
+
+# ══════════════════════════════════════════
+# 邮件签名
+# ══════════════════════════════════════════
+
+
+class SignatureResponse(BaseModel):
+    signature: str | None
+
+
+class SignatureUpdate(BaseModel):
+    signature: str
+
+
+@router.get("/{account_id}/signature", summary="获取账户邮件签名")
+async def get_signature(
+    account_id: uuid.UUID = Path(..., description="邮箱账户 ID"),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> SignatureResponse:
+    """获取指定邮箱账户的邮件签名."""
+    acc = await get_account(db, account_id, user.id)
+    if not acc:
+        raise HTTPException(status_code=404, detail="账户未找到")
+    return SignatureResponse(signature=acc.signature)
+
+
+@router.put("/{account_id}/signature", summary="更新账户邮件签名")
+async def update_signature(
+    account_id: uuid.UUID = Path(..., description="邮箱账户 ID"),
+    body: SignatureUpdate = ...,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> SignatureResponse:
+    """更新指定邮箱账户的邮件签名."""
+    acc = await get_account(db, account_id, user.id)
+    if not acc:
+        raise HTTPException(status_code=404, detail="账户未找到")
+
+    acc.signature = body.signature
+    await db.flush()
+    await db.refresh(acc)
+    return SignatureResponse(signature=acc.signature)

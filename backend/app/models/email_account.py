@@ -11,7 +11,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -43,6 +43,9 @@ class EmailAccount(Base):
     smtp_ssl: Mapped[bool] = mapped_column(Boolean, default=True)
     smtp_username: Mapped[Optional[str]] = mapped_column(String(320), nullable=True)
     smtp_password_enc: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+
+    # 邮件签名
+    signature: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # 默认账户标记
     is_default: Mapped[bool] = mapped_column(Boolean, default=False)

@@ -14,7 +14,7 @@ from app.config import settings
 from app.database import close_db, init_db
 from app.api import auth, health, mail
 from app.api import settings as settings_router
-from app.api import contacts, api_tokens, email_accounts, auto_detect, files, memos, search, shares, system_docs
+from app.api import contacts, api_tokens, email_accounts, auto_detect, files, memos, search, shares, system_docs, mail_batch
 
 
 @asynccontextmanager
@@ -92,3 +92,4 @@ app.include_router(shares.router, tags=["shares"])
 app.include_router(files.router, tags=["files"])
 app.include_router(search.router, tags=["search"])
 app.include_router(system_docs.router, tags=["docs"])
+app.include_router(mail_batch.router, tags=["mail-batch"])

@@ -44,23 +44,22 @@
 ### 2.1 克隆仓库
 
 ```bash
+# 克隆仓库
 git clone https://github.com/Leorand-dev/minimail.git
 cd minimail
 ```
 
-### 2.2 配置环境变量
+### 2.2 配置环境变量 (Docker 部署)
+
+根目录的 `docker-compose.yml` 会加载同目录下的 `.env` 文件：
 
 ```bash
-cp backend/.env.example backend/.env
-# 按需修改 .env 中的配置
+# 创建 .env 文件 (从模板)
+cp .env.example .env
+# 编辑 .env 填入 SECRET_KEY 和 ENCRYPTION_KEY
+```
 
-# Docker 部署使用单独 .env 文件
-cp docker/.env.example docker/.env 2>/dev/null || cat > docker/.env << EOF
-DB_PASSWORD=your_strong_password
-SECRET_KEY=$(openssl rand -hex 32)
-ENCRYPTION_KEY=$(openssl rand -base64 32 | cut -c1-32)
-DOMAIN=localhost
-EOF
+> 模板文件 `.env.example` 在项目根目录。
 ```
 
 关键配置项（详见[环境变量](#4-环境变量)）：

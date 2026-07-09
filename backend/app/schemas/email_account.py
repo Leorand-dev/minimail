@@ -54,6 +54,7 @@ class AccountResponse(BaseModel):
     smtp_ssl: bool
     smtp_username: str | None
     smtp_password_masked: bool = False
+    signature: str | None = None
     is_default: bool
     created_at: datetime
     configured: bool = False

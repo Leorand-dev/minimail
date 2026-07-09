@@ -182,6 +182,24 @@ export async function fetchAccountFolders(accountId: string): Promise<AccountFol
   return res.data;
 }
 
+// ── 批量操作 ──
+
+export async function batchMarkRead(folder: string, uids: number[]): Promise<void> {
+  await api.post('/mail/batch/read', { folder, uids });
+}
+
+export async function batchMarkUnread(folder: string, uids: number[]): Promise<void> {
+  await api.post('/mail/batch/unread', { folder, uids });
+}
+
+export async function batchDeleteMessages(folder: string, uids: number[]): Promise<void> {
+  await api.post('/mail/batch/delete', { folder, uids });
+}
+
+export async function batchArchive(folder: string, uids: number[]): Promise<void> {
+  await api.post('/mail/batch/archive', { folder, uids });
+}
+
 // ── 会话视图 ──
 
 export interface ConversationMessage {

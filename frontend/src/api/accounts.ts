@@ -17,6 +17,7 @@ export interface EmailAccount {
   is_default: boolean;
   created_at: string;
   configured: boolean;
+  signature?: string;
 }
 
 export interface AccountCreateRequest {
@@ -33,6 +34,7 @@ export interface AccountCreateRequest {
   smtp_username?: string;
   smtp_password?: string;
   is_default?: boolean;
+  signature?: string;
 }
 
 export async function fetchAccounts(): Promise<EmailAccount[]> {

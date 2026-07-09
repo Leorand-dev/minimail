@@ -6,6 +6,7 @@ import AutocompleteInput from './AutocompleteInput';
 import RichTextEditor from './RichTextEditor';
 import { fetchAccounts } from '@/api/accounts';
 import type { EmailAccount } from '@/api/accounts';
+import type { Editor } from '@tiptap/react';
 
 interface ComposePageProps {
   onBack?: () => void;
@@ -27,6 +28,8 @@ export default function ComposePage({ onBack }: ComposePageProps) {
   const [success, setSuccess] = useState('');
   const [accounts, setAccounts] = useState<EmailAccount[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const editorRef = useRef<Editor | null>(null);
+  const prevAccountIdRef = useRef<string | null>(null);
 
   // Listen for compose-send event from parent header
   const handleSendRef = useRef<() => void>(() => {});
@@ -64,6 +67,27 @@ export default function ComposePage({ onBack }: ComposePageProps) {
   useEffect(() => {
     fetchAccounts().then(setAccounts).catch(() => {});
   }, []);
+
+  // ── 签名插入: 切换账户时自动插入签名 ──
+  useEffect(() => {
+    if (!selectedAccountId) return;
+    if (prevAccountIdRef.current === selectedAccountId) return;
+    prevAccountIdRef.current = selectedAccountId;
+
+    const acc = accounts.find(a => a.id === selectedAccountId);
+    if (!acc?.signature) return;
+
+    // 检查是否已插入签名 (通过 --\n 分隔符)
+    if (body.includes('\n\n--\n')) return;
+
+    // 通过 TipTap editor 在末尾插入签名
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    const sigHtml = `\n\n--\n${acc.signature.replace(/\n/g, '<br>')}`;
+    const endPos = editor.state.doc.content.size;
+    editor.commands.insertContentAt(endPos, sigHtml);
+  }, [selectedAccountId, accounts, body]);
 
   const handleSend = async () => {
     if (!to.trim()) {
@@ -215,6 +239,7 @@ export default function ComposePage({ onBack }: ComposePageProps) {
           value={htmlBody}
           onChange={(html, text) => { setHtmlBody(html); setBody(text); }}
           placeholder="在此输入邮件内容..."
+          editorRef={editorRef}
         />
       </div>
     </div>

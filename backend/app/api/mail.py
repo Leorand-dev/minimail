@@ -790,6 +790,7 @@ class SendRequest(BaseModel):
     reply_to: str | None = None
     in_reply_to: str | None = None
     from_addr: str | None = None
+    account_id: str | None = None
 
 
 @router.post("/send", status_code=status.HTTP_200_OK)
@@ -800,19 +801,29 @@ async def send_mail(
 ):
     """发送邮件 (通过用户 SMTP 配置)."""
     from app.services.smtp_service import send_email
-    from app.services.email_account import get_default_account, _decrypt_password
+    from app.services.email_account import get_default_account, get_account, _decrypt_password
 
     if not body.to:
         raise HTTPException(status_code=400, detail="收件人不能为空")
 
-    # 解析 SMTP 配置: 优先用默认账户
+    # 解析 SMTP 配置: 优先用指定账户, 其次默认账户
     smtp_host = user.smtp_host
     smtp_port = user.smtp_port
     smtp_ssl = user.smtp_ssl
     smtp_username = user.smtp_username or user.email
     smtp_password = user.smtp_password_enc or ""
 
-    acc = await get_default_account(db, user.id)
+    acc = None
+    if body.account_id:
+        try:
+            account_uuid = uuid.UUID(body.account_id)
+            acc = await get_account(db, account_uuid, user.id)
+        except Exception:
+            pass
+
+    if not acc:
+        acc = await get_default_account(db, user.id)
+
     if acc and acc.smtp_host:
         smtp_host = acc.smtp_host
         smtp_port = acc.smtp_port
@@ -820,14 +831,24 @@ async def send_mail(
         smtp_username = acc.smtp_username or acc.email
         smtp_password = _decrypt_password(acc.smtp_password_enc) if acc.smtp_password_enc else ""
 
+    # 追加邮件签名
+    text_body = body.text_body
+    html_body = body.html_body
+    if acc and acc.signature:
+        sig_block = f"\n\n--\n{acc.signature}"
+        if text_body:
+            text_body = text_body + sig_block
+        if html_body:
+            html_body = html_body + sig_block.replace("\n", "<br>\n")
+
     try:
         result = await send_email(
             user=user,
             from_addr=body.from_addr or user.email,
             to_addrs=body.to,
             subject=body.subject,
-            text_body=body.text_body,
-            html_body=body.html_body,
+            text_body=text_body,
+            html_body=html_body,
             cc=body.cc,
             bcc=body.bcc,
             reply_to=body.reply_to,

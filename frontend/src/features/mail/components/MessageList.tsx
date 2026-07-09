@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMailStore } from '@/stores/mail';
-import { fetchMessages, fetchMessageDetail, searchMessages as searchApi, moveMessage, deleteMessage } from '@/api/mail';
+import { fetchMessages, fetchMessageDetail, searchMessages as searchApi, moveMessage, deleteMessage, batchMarkRead, batchMarkUnread, batchDeleteMessages, batchArchive, markRead, markUnread } from '@/api/mail';
 import type { MessageSummary } from '@/api/mail';
 import MessageRow from './MessageRow';
 import api from '@/api/client';
@@ -54,6 +54,10 @@ export default function MessageList({ className = '', onSelectMessage }: Message
   const [showMoveDialog, setShowMoveDialog] = useState(false);
   const [moving, setMoving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [markingRead, setMarkingRead] = useState(false);
+  const [markingUnread, setMarkingUnread] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const isAllChecked = messages.length > 0 && checked.size === messages.length;
 
@@ -128,22 +132,21 @@ export default function MessageList({ className = '', onSelectMessage }: Message
     }
   };
 
-  // ── 批量操作 ──
+  // ── 批量删除 ──
   const handleBatchDelete = async () => {
     if (checked.size === 0) return;
+    setShowDeleteConfirm(false);
     setDeleting(true);
     try {
       const uids = Array.from(checked);
-      // 逐个删除 (IMAP 不支持批量)
-      for (const uid of uids) {
-        try {
-          // 先尝试真实 IMAP
-          await deleteMessage(currentFolder, uid);
-        } catch {
-          // 本地删除 (demo 模式)
+      try {
+        await batchDeleteMessages(currentFolder, uids);
+      } catch {
+        // 逐个删除 (fallback)
+        for (const uid of uids) {
+          try { await deleteMessage(currentFolder, uid); } catch {}
         }
       }
-      // 从本地列表移除
       const updated = messages.filter((m) => !checked.has(m.uid));
       setMessages(updated, updated.length, 1, 1);
       clearChecked();
@@ -171,6 +174,75 @@ export default function MessageList({ className = '', onSelectMessage }: Message
       setShowMoveDialog(false);
     } finally {
       setMoving(false);
+    }
+  };
+
+  // ── 批量标记已读 ──
+  const handleBatchMarkRead = async () => {
+    if (checked.size === 0) return;
+    setMarkingRead(true);
+    try {
+      const uids = Array.from(checked);
+      try {
+        await batchMarkRead(currentFolder, uids);
+      } catch {
+        // 逐个尝试 (fallback)
+        for (const uid of uids) {
+          try { await markRead(currentFolder, uid); } catch {}
+        }
+      }
+      // 更新本地状态
+      const updated = messages.map((m) =>
+        checked.has(m.uid) ? { ...m, is_read: true, flags: [...(m.flags || []), '\\Seen'] } : m
+      );
+      setMessages(updated, totalMessages, page, totalPages);
+      clearChecked();
+    } finally {
+      setMarkingRead(false);
+    }
+  };
+
+  // ── 批量标记未读 ──
+  const handleBatchMarkUnread = async () => {
+    if (checked.size === 0) return;
+    setMarkingUnread(true);
+    try {
+      const uids = Array.from(checked);
+      try {
+        await batchMarkUnread(currentFolder, uids);
+      } catch {
+        for (const uid of uids) {
+          try { await markUnread(currentFolder, uid); } catch {}
+        }
+      }
+      const updated = messages.map((m) =>
+        checked.has(m.uid) ? { ...m, is_read: false, flags: (m.flags || []).filter(f => f !== '\\Seen') } : m
+      );
+      setMessages(updated, totalMessages, page, totalPages);
+      clearChecked();
+    } finally {
+      setMarkingUnread(false);
+    }
+  };
+
+  // ── 批量归档 ──
+  const handleBatchArchive = async () => {
+    if (checked.size === 0) return;
+    setArchiving(true);
+    try {
+      const uids = Array.from(checked);
+      try {
+        await batchArchive(currentFolder, uids);
+      } catch {
+        for (const uid of uids) {
+          try { await moveMessage(currentFolder, uid, 'Archive'); } catch {}
+        }
+      }
+      const updated = messages.filter((m) => !checked.has(m.uid));
+      setMessages(updated, updated.length, 1, 1);
+      clearChecked();
+    } finally {
+      setArchiving(false);
     }
   };
 
@@ -289,20 +361,41 @@ export default function MessageList({ className = '', onSelectMessage }: Message
       {/* ── 批量操作栏 ── */}
       {checked.size > 0 && (
         <div className="flex items-center gap-2 px-3 py-2 border-t border-gray-200 bg-blue-50">
-          <span className="text-xs text-gray-600 font-medium">
+          <span className="text-xs text-gray-700 font-semibold">
             已选 {checked.size} 封
           </span>
           <div className="flex-1" />
           <button
-            onClick={handleBatchDelete}
-            disabled={deleting}
-            className="px-3 py-1 text-xs text-white bg-red-500 rounded hover:bg-red-600 disabled:opacity-50 transition-colors"
+            onClick={handleBatchMarkRead}
+            disabled={markingRead}
+            className="px-2.5 py-1 text-xs text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 transition-colors"
           >
-            {deleting ? '删除中...' : '🗑 删除'}
+            {markingRead ? '...' : '📥 标记已读'}
+          </button>
+          <button
+            onClick={handleBatchMarkUnread}
+            disabled={markingUnread}
+            className="px-2.5 py-1 text-xs text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 transition-colors"
+          >
+            {markingUnread ? '...' : '📤 标记未读'}
+          </button>
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            disabled={deleting}
+            className="px-2.5 py-1 text-xs text-white bg-red-500 rounded hover:bg-red-600 disabled:opacity-50 transition-colors"
+          >
+            {deleting ? '删除中...' : '🗑️ 删除'}
+          </button>
+          <button
+            onClick={handleBatchArchive}
+            disabled={archiving}
+            className="px-2.5 py-1 text-xs text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 transition-colors"
+          >
+            {archiving ? '...' : '📦 归档'}
           </button>
           <button
             onClick={() => setShowMoveDialog(true)}
-            className="px-3 py-1 text-xs text-white bg-[#066da5] rounded hover:bg-[#05588a] transition-colors"
+            className="px-2.5 py-1 text-xs text-white bg-[#066da5] rounded hover:bg-[#05588a] transition-colors"
           >
             📂 移动到
           </button>
@@ -372,6 +465,33 @@ export default function MessageList({ className = '', onSelectMessage }: Message
                 className="px-3 py-1 text-xs text-gray-500 border border-gray-300 rounded hover:bg-gray-50"
               >
                 取消
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 删除确认弹窗 ── */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="bg-white rounded-lg shadow-xl w-80 p-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-sm font-semibold text-gray-700 mb-2">确认删除</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              确定要删除选中的 <strong>{checked.size}</strong> 封邮件吗？此操作不可撤销。
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-3 py-1.5 text-xs text-gray-500 border border-gray-300 rounded hover:bg-gray-50"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleBatchDelete}
+                disabled={deleting}
+                className="px-3 py-1.5 text-xs text-white bg-red-500 rounded hover:bg-red-600 disabled:opacity-50 transition-colors"
+              >
+                {deleting ? '删除中...' : '确认删除'}
               </button>
             </div>
           </div>

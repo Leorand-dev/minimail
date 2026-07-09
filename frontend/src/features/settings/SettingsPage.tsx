@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchMailSettings, testMailConnection, updateMailSettings, autoDetectMailSettings } from '@/api/settings';
-import { fetchAccounts, createAccount, deleteAccount, setDefaultAccount } from '@/api/accounts';
+import { fetchAccounts, createAccount, deleteAccount, setDefaultAccount, updateAccount } from '@/api/accounts';
 import type { EmailAccount } from '@/api/accounts';
 
 interface SettingsPageProps {
@@ -24,6 +24,9 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
   // 多账户
   const [accounts, setAccounts] = useState<EmailAccount[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(true);
+  const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
+  const [editSignature, setEditSignature] = useState('');
+  const [savingSignature, setSavingSignature] = useState(false);
 
   useEffect(() => {
     fetchMailSettings()
@@ -67,6 +70,29 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
       setAccounts(prev => prev.map(a => ({ ...a, is_default: a.id === id })));
       setSuccess('✅ 默认账户已更新');
     } catch { setError('设置默认账户失败'); }
+  };
+
+  const handleEditAccount = (acc: EmailAccount) => {
+    if (editingAccountId === acc.id) {
+      setEditingAccountId(null);
+    } else {
+      setEditingAccountId(acc.id);
+      setEditSignature(acc.signature || '');
+    }
+  };
+
+  const handleSaveSignature = async (id: string) => {
+    setSavingSignature(true); setError(''); setSuccess('');
+    try {
+      await updateAccount(id, { signature: editSignature });
+      setAccounts(prev => prev.map(a => a.id === id ? { ...a, signature: editSignature } : a));
+      setSuccess('✅ 签名已保存');
+      setEditingAccountId(null);
+    } catch {
+      setError('保存签名失败');
+    } finally {
+      setSavingSignature(false);
+    }
   };
 
   const handleSave = async () => {
@@ -133,20 +159,50 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
             ) : (
               <div className="space-y-2">
                 {accounts.map((acc) => (
-                  <div key={acc.id} className="flex items-center justify-between px-3 py-2 bg-gray-50 border border-gray-200 rounded text-sm">
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${acc.configured ? 'bg-green-400' : 'bg-gray-300'}`} />
-                      <span className="font-medium text-gray-700 truncate">{acc.name}</span>
-                      <span className="text-gray-400 truncate">{acc.email}</span>
-                      {acc.is_default && <span className="px-1.5 py-0.5 text-[10px] bg-[#066da5] text-white rounded">默认</span>}
-                      {!acc.configured && <span className="text-xs text-gray-400">(未配置)</span>}
+                  <div key={acc.id} className="bg-gray-50 border border-gray-200 rounded text-sm">
+                    <div className="flex items-center justify-between px-3 py-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${acc.configured ? 'bg-green-400' : 'bg-gray-300'}`} />
+                        <span className="font-medium text-gray-700 truncate">{acc.name}</span>
+                        <span className="text-gray-400 truncate">{acc.email}</span>
+                        {acc.is_default && <span className="px-1.5 py-0.5 text-[10px] bg-[#066da5] text-white rounded">默认</span>}
+                        {!acc.configured && <span className="text-xs text-gray-400">(未配置)</span>}
+                      </div>
+                      <div className="flex gap-1 ml-2 flex-shrink-0">
+                        <button onClick={() => handleEditAccount(acc)} className="px-2 py-0.5 text-xs text-[#066da5] hover:bg-blue-50 rounded">编辑</button>
+                        {!acc.is_default && (
+                          <button onClick={() => handleSetDefault(acc.id)} className="px-2 py-0.5 text-xs text-[#066da5] hover:bg-blue-50 rounded">设为默认</button>
+                        )}
+                        <button onClick={() => handleDeleteAccount(acc.id, acc.name)} className="px-2 py-0.5 text-xs text-red-500 hover:bg-red-50 rounded">删除</button>
+                      </div>
                     </div>
-                    <div className="flex gap-1 ml-2 flex-shrink-0">
-                      {!acc.is_default && (
-                        <button onClick={() => handleSetDefault(acc.id)} className="px-2 py-0.5 text-xs text-[#066da5] hover:bg-blue-50 rounded">设为默认</button>
-                      )}
-                      <button onClick={() => handleDeleteAccount(acc.id, acc.name)} className="px-2 py-0.5 text-xs text-red-500 hover:bg-red-50 rounded">删除</button>
-                    </div>
+                    {editingAccountId === acc.id && (
+                      <div className="px-3 py-3 bg-white border-t border-gray-100 rounded-b">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">签名</label>
+                        <textarea
+                          value={editSignature}
+                          onChange={(e) => setEditSignature(e.target.value)}
+                          placeholder="在此输入您的邮件签名..."
+                          rows={4}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:border-[#066da5] focus:outline-none resize-vertical"
+                        />
+                        <div className="flex justify-end mt-2 gap-2">
+                          <button
+                            onClick={() => setEditingAccountId(null)}
+                            className="px-3 py-1 text-xs text-gray-500 border border-gray-300 rounded hover:bg-gray-50"
+                          >
+                            取消
+                          </button>
+                          <button
+                            onClick={() => handleSaveSignature(acc.id)}
+                            disabled={savingSignature}
+                            className="px-3 py-1 text-xs text-white bg-[#066da5] rounded hover:bg-[#05588a] disabled:opacity-50 transition-colors"
+                          >
+                            {savingSignature ? '保存中...' : '保存签名'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
