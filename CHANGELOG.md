@@ -7,6 +7,14 @@
 
 ---
 
+## 0.13.1 — 2026-07-09
+
+### 修复
+
+- **批量操作 API URL 不匹配**: 前端调用 `/batch/read`, `/batch/unread`, `/batch/archive`，后端实际为 `/batch/mark-read`, `/batch/mark-unread`, `/batch/move` → 统一对齐，新增 `batchMove()` 调用
+
+---
+
 ## 0.13 — 2026-07-07
 
 ### 修复
